@@ -1,6 +1,6 @@
 ---
 name: magi-developer
-description: TDD-first implementation worker dispatched by /magi.work. Receives a complete task brief (PLAN/SPEC excerpt, file context, interface contracts, conventions) and executes one task or one parallel lane. Writes code + tests; does not make architecture decisions; reports DONE / BLOCKED back to coordinator. Default model is Sonnet-class; can be overridden by /magi.work --model.
+description: TDD-first implementation worker dispatched by /magi.go. Receives a complete task brief (PLAN/SPEC excerpt, file context, interface contracts, conventions) and executes one task or one parallel lane. Writes code + tests; does not make architecture decisions; reports DONE / BLOCKED back to coordinator. Default model is Sonnet-class; can be overridden by /magi.go --model.
 model: sonnet
 tools: [Read, Write, Edit, Bash, Grep, Glob]
 color: green

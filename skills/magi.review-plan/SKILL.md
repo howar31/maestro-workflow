@@ -1,6 +1,6 @@
 ---
 name: magi.review-plan
-description: Run a multi-CLI MAGI review of a sprint's PLAN.md / SPEC.md. Spawns reviewers in parallel via the orchestrator, then applies semantic dedup + weighted voting per references/MAGI_VOTING.md. Default reviewers and voting mode come from ~/.config/magi-workflow/config.json. Override with --reviewers and --magi.
+description: Run a multi-CLI MAGI review of a sprint's PLAN.md / SPEC.md. **Optional step** — can be skipped to save tokens if you trust the plan; human review of the doc is a valid alternative. Spawns reviewers in parallel via the orchestrator, then applies semantic dedup + weighted voting per references/MAGI_VOTING.md. Default reviewers and voting mode come from ~/.config/magi-workflow/config.json. Override with --reviewers and --magi.
 disable-model-invocation: true
 ---
 
@@ -22,6 +22,23 @@ Run a lightweight preflight; if `$USER_CONFIG` missing or empty
 
 Read `references/MAGI_VOTING.md` (in the plugin root) for the consensus
 rules. You will follow Steps 1–8 of that document.
+
+## 0.5. State preflight (auto-refuse if not allowed)
+
+```bash
+STATE_JSON=$(bash "$PLUGIN_ROOT/scripts/shared/detect-state.sh")
+blocked=$(jq -r '.disallowed_skills["magi.review-plan"] // empty' <<<"$STATE_JSON")
+if [[ -n "$blocked" ]]; then
+  reason=$(jq -r '.disallowed_skills["magi.review-plan"].reason' <<<"$STATE_JSON")
+  suggest=$(jq -r '.disallowed_skills["magi.review-plan"].suggest' <<<"$STATE_JSON")
+  echo "Cannot run /magi.review-plan: $reason"
+  echo "Suggested: $suggest"
+  exit 1
+fi
+```
+
+`--force` skips preflight. **Note this skill is optional** — the user can
+always skip it entirely by going straight to `/magi.tasks`.
 
 ## 1. Locate the document
 
@@ -151,11 +168,23 @@ Then summarise to the user in chat: top 3 adopted issues + verdict.
 
 ## 8. Hand-off
 
-If verdict = APPROVE: suggest `/magi.tasks` (if not yet done) or
-`/magi.work`.
+Tell the user (in `output_language`):
 
-If verdict ≠ APPROVE: suggest the user revise PLAN.md and re-run
-`/magi.review-plan`.
+- If verdict = APPROVE → suggest `/magi.tasks` (if TASKS.md doesn't exist)
+  or `/magi.go` (if it does).
+- If verdict = APPROVE-WITH-NITS → list nits, ask whether to address
+  before `/magi.tasks` or defer.
+- If verdict = REQUEST-CHANGES → suggest user revise PLAN/SPEC, then
+  re-run `/magi.review-plan` (which will overwrite `MAGI_PLAN_REVIEW.md`).
+
+Example output:
+
+```
+✅ Verdict: APPROVE-WITH-NITS
+
+下一步：
+  /magi.tasks         (拆 milestones + 任務清單)
+```
 
 Do not auto-trigger anything.
 

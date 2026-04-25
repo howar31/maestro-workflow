@@ -20,16 +20,18 @@ Every command is `disable-model-invocation: true` — it only runs when the user
 
 ### Core flow
 
-| Command | Role | Pauses for user? |
-|---------|------|-------------------|
-| `/magi.setup` | First-run onboarding: healthcheck CLIs, write `~/.config/magi-workflow/config.json`, dry-run | yes (interactive) |
-| `/magi.init` | One-time project bootstrap: scaffolds missing root CLAUDE/README/SPEC + docs/PRD/TECHSTACK/BACKLOG. Idempotent | yes (per-file confirm) |
-| `/magi.plan` | Coordinator drafts PLAN.md / SPEC.md in `docs/<num>-<slug>/`. Bare invocation reads `docs/BACKLOG.md` Pending entries and offers them as candidates. With description argument, plans directly | yes (confirm doc) |
-| `/magi.tasks` | Coordinator decomposes PLAN/SPEC into TASKS.md milestones + checklists | yes (confirm tasks) |
-| `/magi.review-plan` | Multi-CLI MAGI review of PLAN/SPEC; outputs `MAGI_PLAN_REVIEW.md` | yes (verdict to user) |
-| `/magi.work` | Dispatches `magi-developer` (Sonnet) per task; updates WORKS.md | yes (before commit) |
-| `/magi.review-code` | Multi-CLI MAGI on git diff (default); `--single` falls back to `magi-reviewer` (Opus). Always produces `<sprint>/DRIFT.md` with `Status: NONE`/`DETECTED` when a sprint context exists | yes (verdict to user) |
-| `/magi.commit` | Stage + commit. Sprint mode: A-class drift backfill into PLAN/SPEC, C-class promotion to `docs/BACKLOG.md`, optional root-doc sync, Conventional Commits. Standalone mode (no sprint context) for chore/docs/small fixes | yes (confirm message) |
+Every command does a **state preflight** via `scripts/shared/detect-state.sh` and refuses to run when prerequisites are missing (with a clear "Suggested next step" pointing the user to the right command). Every command's hand-off ends with a "下一步" recommendation so users don't need to memorize the sequence.
+
+| Command | Role | Mandatory? | Pauses for user? |
+|---------|------|------------|-------------------|
+| `/magi.setup` | First-run onboarding: healthcheck CLIs, write `~/.config/magi-workflow/config.json`, dry-run | once per machine | yes (interactive) |
+| `/magi.init` | One-time project bootstrap: scaffolds missing root CLAUDE/README/SPEC + docs/PRD/TECHSTACK/BACKLOG. Idempotent | once per project | yes (per-file confirm) |
+| `/magi.plan` | **Smart dispatcher**: classifies type (feat/fix/hotfix/refactor/chore/docs/perf/test/style/ci) + scale (trivial/minor/major) and routes to PLAN.md / SPEC.md / TICKET.md / HOTFIX.md / no-artifact. Bare invocation reads `docs/BACKLOG.md` Pending entries | per change | yes (confirm classification + doc) |
+| `/magi.tasks` | Decomposes PLAN/SPEC/TICKET into TASKS.md milestones + checklists | major work only | yes (confirm tasks) |
+| `/magi.review-plan` | Multi-CLI MAGI review of plan; outputs `MAGI_PLAN_REVIEW.md` | **optional** (skip to save tokens) | yes (verdict to user) |
+| `/magi.go` | Dispatches `magi-developer` (Sonnet) per task. **Default auto-parallelizes** disjoint tasks; `--parallel` forces, `--sequential` overrides | per work session | yes (before commit) |
+| `/magi.review-code` | Multi-CLI MAGI on git diff; produces `DRIFT.md` (Status: NONE/DETECTED) when a sprint context exists | **mandatory** in sprint flow (DRIFT.md is required by `/magi.commit`) | yes (verdict to user) |
+| `/magi.commit` | Stage + commit. Sprint mode: A-class drift backfill into PLAN/SPEC, C-class promotion to `docs/BACKLOG.md`, optional root-doc sync, Conventional Commits. Standalone mode for chore/docs/small fixes | per commit | yes (confirm message) |
 
 ### Web-domain elaborations (run between `/magi.plan` and `/magi.tasks`)
 
@@ -44,6 +46,16 @@ Every command is `disable-model-invocation: true` — it only runs when the user
 
 - **`magi-developer`** (`model: sonnet`) — TDD-first implementation worker. Read/Write/Edit/Bash/Grep/Glob. Reports `DONE: <summary>` or `BLOCKED: <reason>`. Does not make architecture decisions and does not commit.
 - **`magi-reviewer`** (`model: opus`) — Defensive code reviewer. Read/Grep/Glob/Bash (read-only). Outputs structured Critical / Important / Note plus `Drift from contract` (A/B/C classes) when a sprint contract is provided. Never edits files.
+
+## Project state model
+
+magi-workflow has 8 project states derived purely from the filesystem (no state file). The shared script `scripts/shared/detect-state.sh` is the single source of truth — it inspects which root/docs/sprint files exist, computes the state, and outputs a JSON that includes:
+
+- `state` — one of `BOOTSTRAP` / `INITIALIZED` / `PLANNING` / `PLAN_REVIEWED` / `TASKS_READY` / `IN_PROGRESS` / `WORK_DONE` / `CODE_REVIEWED`
+- `allowed_skills` / `disallowed_skills` — which `magi.*` commands are valid in this state and (for disallowed ones) the reason + suggested next step
+- `warnings` — staleness signals (e.g., `stale_plan_review`, `stale_drift`, `tasks_without_plan`)
+
+Every magi skill's preflight calls this script and refuses to run if it appears in `disallowed_skills`. Full state model + transitions: see SPEC.md "Project state model" section.
 
 ## Project document tiers
 

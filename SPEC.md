@@ -38,7 +38,7 @@ Decision rule: "Want to see it on first opening the repo?" → Tier 1. "Referenc
 | D | Web-domain skills (frontend / backend / infra / ci) + 4 reference docs | ✅ done |
 | E | Canonical `references/AGENTS.md` + optional git hooks | ✅ done |
 | F-Phase 1 | Drift detection (`/magi.review-code` + `magi-reviewer`) + `/magi.commit` (dual-mode) + `/magi.init` (bootstrap) + `/magi.plan` backlog awareness | ✅ done |
-| F-Phase 2 (planned) | `/magi.plan` dispatcher: type/scale detection, TICKET.md / HOTFIX.md lightweight templates, smart routing | ⏳ planned |
+| F-Phase 2 | `/magi.work` → `/magi.go` rename, `scripts/shared/detect-state.sh` (single-source state model), state-aware preflight + handoff in every skill, `/magi.plan` dispatcher (type/scale × routing), TICKET.md + HOTFIX.md templates, `/magi.go` auto-parallel default | ✅ done |
 
 ## Slash commands (Phase B)
 
@@ -53,7 +53,7 @@ orchestrator + magi-consensus shell scripts and to the two subagents below.
 | `/magi.plan [slug] "<desc>"` | Resolve `docs/<num>-<slug>/`, read project context (PRD/TECHSTACK/CLAUDE/AGENTS), decide PLAN.md vs SPEC.md, draft, pause for user confirmation. **Bare invocation** (no description argument) reads `docs/BACKLOG.md` `## Pending` entries; user picks a number → that entry seeds the new sprint and is moved to `## Promoted to sprints`. With description argument, BACKLOG.md is fully ignored. |
 | `/magi.tasks [<num>-<slug>] [--milestones N]` | Read PLAN/SPEC, write TASKS.md with milestones + atomic tasks, mark `🔀` lanes for parallelisable work, pause for confirmation. |
 | `/magi.review-plan [--reviewers ...] [--magi <mode>]` | Build review prompt from PLAN/SPEC, invoke orchestrator, run magi-consensus, then **the coordinator** applies semantic dedup + weighted vote per `references/MAGI_VOTING.md`, writes `MAGI_PLAN_REVIEW.md`. |
-| `/magi.work [--milestone N \| --task T<m>.<n>] [--parallel] [--model ...]` | Read TASKS.md, dispatch `magi-developer` per task (or per `🔀` lane in parallel), aggregate DONE/BLOCKED, append to WORKS.md, pause before commit. |
+| `/magi.go [--milestone N \| --task T<m>.<n>] [--parallel] [--model ...]` | Read TASKS.md, dispatch `magi-developer` per task (or per `🔀` lane in parallel), aggregate DONE/BLOCKED, append to WORKS.md, pause before commit. |
 | `/magi.review-code [--single] [--magi <mode>] [--diff <range>]` | Default: orchestrator + MAGI on `git diff`. `--single`: dispatch `magi-reviewer` only. Reviewer prompt includes per-feature PLAN/SPEC; reviewers output `## Drift from contract` (A/B/C). Writes `MAGI_CODE_REVIEW.md` (or `SINGLE_CODE_REVIEW.md`) **and** `<sprint>/DRIFT.md` (always, with `Status: NONE`/`DETECTED` header). Never auto-commits. |
 | `/magi.commit [push] [--mode sprint\|standalone] [--sprint <slug>] [--skip-review] [--no-root-sync] [--root-sync-strict]` | Auto-detects mode. **Sprint mode**: read `<sprint>/DRIFT.md`, prompt user per A-class to backfill PLAN/SPEC, prompt per C-class to promote to `docs/BACKLOG.md`. Then optional Level-2 root-doc sync. Generate Conventional Commits message. **Standalone mode**: skip drift; root-sync detection + commit. Single commit per invocation; never auto-commits. |
 
@@ -61,7 +61,7 @@ orchestrator + magi-consensus shell scripts and to the two subagents below.
 
 | Agent | Model | Tools | Role |
 |-------|-------|-------|------|
-| `magi-developer` | `sonnet` | Read, Write, Edit, Bash, Grep, Glob | TDD-first implementation worker. Receives a self-contained task brief from `/magi.work`. Reports `DONE` or `BLOCKED`. Forbidden from architecture changes, scope expansion, commits, or package upgrades. |
+| `magi-developer` | `sonnet` | Read, Write, Edit, Bash, Grep, Glob | TDD-first implementation worker. Receives a self-contained task brief from `/magi.go`. Reports `DONE` or `BLOCKED`. Forbidden from architecture changes, scope expansion, commits, or package upgrades. |
 | `magi-reviewer` | `opus` | Read, Grep, Glob, Bash (read-only) | Defensive code reviewer for `/magi.review-code --single` and degraded-MAGI fallback. Outputs Verdict + 🔴 Critical / 🟡 Important / 🟢 Note. When a sprint contract (PLAN/SPEC) is provided in the brief, additionally outputs `## Drift from contract` with A (contract violations) / B (below-the-contract decisions) / C (out-of-scope observations). Never edits files. |
 
 ## Override flags (Phase B)
@@ -199,6 +199,137 @@ This avoids the macOS pitfall where `gemini`'s shebang `#!/usr/bin/env node` res
 ```
 
 Resolution order: `$MAGI_CONFIG_PATH` → `~/.config/magi-workflow/config.json` → `<plugin>/config/default.json`.
+
+## Project state model (Phase 2)
+
+magi-workflow has 8 project states derived purely from filesystem inspection. Single source of truth: `scripts/shared/detect-state.sh`. State JSON is **never persisted** — each call recomputes.
+
+| State | Detection signals |
+|-------|-------------------|
+| `BOOTSTRAP` | No root `CLAUDE.md` / `README.md` / `SPEC.md` |
+| `INITIALIZED` | At least one root doc exists; no active sprint with PLAN-equivalent |
+| `PLANNING` | Latest sprint has `PLAN.md` or `SPEC.md` or `TICKET.md` or `HOTFIX.md`, no `TASKS.md` |
+| `PLAN_REVIEWED` | Above + `MAGI_PLAN_REVIEW.md` exists in sprint |
+| `TASKS_READY` | PLANNING + `TASKS.md` exists, no `WORKS.md` |
+| `IN_PROGRESS` | TASKS_READY + `WORKS.md` exists, some unchecked tasks remain |
+| `WORK_DONE` | All tasks in TASKS.md checked OR WORKS.md indicates "no more tasks" |
+| `CODE_REVIEWED` | TASKS_READY+ with `DRIFT.md` present |
+
+### `detect-state.sh` JSON output
+
+```json
+{
+  "state": "PLANNING",
+  "sprint_dir": "docs/03-profile-page",
+  "files": { "root_claude": true, "sprint_plan": true, ... },
+  "tasks_total": 0,
+  "tasks_done": 0,
+  "has_diff": true,
+  "hotfix_mode": false,
+  "allowed_skills": ["magi.setup", "magi.init", "magi.plan", "magi.tasks", ...],
+  "disallowed_skills": {
+    "magi.go": {
+      "reason": "no TASKS.md and not a hotfix sprint (state=PLANNING)",
+      "suggest": "/magi.tasks"
+    }
+  },
+  "warnings": [
+    {"type": "stale_plan_review", "file": "...", "reason": "...", "suggest": "/magi.review-plan"}
+  ]
+}
+```
+
+### Skill rules (encoded in detect-state.sh)
+
+| Skill | Allowed states | Mandatory? |
+|-------|---------------|------------|
+| `magi.setup` / `magi.init` | All | once each |
+| `magi.plan` | All (warns in BOOTSTRAP) | per change |
+| `magi.tasks` | PLANNING + later | major work only |
+| `magi.review-plan` | PLANNING + later | **optional** |
+| `magi.go` | TASKS_READY + later, or HOTFIX-mode PLANNING | per work session |
+| `magi.review-code` | Any state with `has_diff=true` | **mandatory** in sprint flow |
+| `magi.commit` | CODE_REVIEWED (sprint mode) or any state with `has_diff=true` (standalone) | per commit |
+| `magi.web.*` | PLANNING + later | optional add-ons |
+
+### Staleness warnings (mtime-based)
+
+| Warning type | Condition | Affects |
+|--------------|-----------|---------|
+| `stale_plan_review` | `mtime(MAGI_PLAN_REVIEW.md) < mtime(PLAN/SPEC/TICKET.md)` | `/magi.tasks` |
+| `stale_drift` | `mtime(DRIFT.md) < mtime(any modified code file)` | `/magi.commit` |
+| `tasks_without_plan` | `TASKS.md` exists but no plan-equivalent | `/magi.go` |
+| `works_without_tasks` | `WORKS.md` exists but no `TASKS.md` | warning only |
+
+Staleness does **not** demote state — file existence still defines state. Skills surface relevant warnings to the user after a successful preflight.
+
+## Smart dispatcher (Phase 2)
+
+`/magi.plan` upgraded from "feature planner" to **smart entry point**. It classifies each request and routes to one of five outcomes.
+
+### Type × Scale → Artifact routing matrix
+
+| Type \ Scale | Trivial | Minor | Major |
+|--------------|---------|-------|-------|
+| `feat` | TICKET.md | TICKET.md | PLAN.md / SPEC.md |
+| `fix` | none → `/magi.commit` standalone | TICKET.md | PLAN.md / SPEC.md |
+| `hotfix` | HOTFIX.md | HOTFIX.md | HOTFIX.md (always fast-path) |
+| `refactor` | none | TICKET.md | SPEC.md |
+| `chore` | none | TICKET.md | TICKET.md |
+| `docs` | none | TICKET.md | TICKET.md |
+| `perf` | TICKET.md | TICKET.md | SPEC.md |
+| `test` / `style` / `ci` | none | TICKET.md | TICKET.md |
+
+Classification is **LLM semantic** (not keyword regex) — the coordinator (Opus) understands zh-TW / English / mixed input. User can override interactively or via `--type` / `--scale` / `--artifact` flags.
+
+### Lightweight template schemas
+
+#### TICKET.md
+
+```markdown
+# Ticket — <Title>
+> Type: <type>  •  Scale: <minor|major>
+
+## Context
+## Approach
+## Verification
+```
+
+`/magi.review-code` treats TICKET.md as a contract for drift detection, same as PLAN/SPEC.
+
+#### HOTFIX.md
+
+```markdown
+# Hotfix — <one-sentence summary>
+> Severity: <critical|high>  •  Reported: <ISO date>
+
+## Repro
+## Root cause
+## Fix
+## Test
+## Rollback plan
+```
+
+Hotfix flow: `/magi.plan` → HOTFIX.md → **`/magi.go`** (skip `/magi.tasks`) → `/magi.review-code` (mandatory; drifts against HOTFIX.md) → `/magi.commit` (`fix:` prefix).
+
+### Hand-off recommendations (per artifact)
+
+| Artifact | Recommended next step |
+|----------|-----------------------|
+| `PLAN.md` / `SPEC.md` | `/magi.review-plan` (**optional**) → `/magi.tasks` |
+| `TICKET.md` | `/magi.tasks` directly |
+| `HOTFIX.md` | `/magi.go` directly (fast-path) |
+| (no artifact) | `/magi.commit` standalone after edit |
+
+## /magi.go auto-parallel (Phase 2)
+
+`/magi.go` (renamed from `/magi.work`) defaults to **auto-parallel**: analyze each task's file scope from PLAN/SPEC + task description, dispatch in parallel any tasks with disjoint scope, fall back to sequential when uncertain.
+
+| Flag | Behavior |
+|------|----------|
+| (no flag) | auto-detect; trust `🔀` lanes; sequential when uncertain |
+| `--parallel` | force parallel for entire batch |
+| `--sequential` | force sequential (debug mode) |
 
 ## Drift detection (Phase 1)
 

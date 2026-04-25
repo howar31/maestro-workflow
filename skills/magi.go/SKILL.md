@@ -1,10 +1,10 @@
 ---
-name: magi.work
-description: Execute the next undone task(s) from a sprint's TASKS.md by dispatching the magi-developer subagent (Sonnet by default). Updates WORKS.md as a development log. Pauses for user confirmation before any commit. Supports --model, --task, --milestone, --parallel for fine-grained control.
+name: magi.go
+description: Execute the next undone task(s) from a sprint's TASKS.md by dispatching the magi-developer subagent (Sonnet by default). Updates WORKS.md as a development log. Pauses for user confirmation before any commit. Default behavior auto-parallelizes tasks with disjoint file scopes; --parallel forces parallel, --sequential forces serial. Supports --model, --task, --milestone for fine-grained control.
 disable-model-invocation: true
 ---
 
-# /magi.work — execute tasks via subagent
+# /magi.go — execute tasks via subagent
 
 You are the coordinator. Read TASKS.md, dispatch `magi-developer` to do
 the work, collect results, update WORKS.md, and stop. **You do not write
@@ -19,6 +19,30 @@ USER_CONFIG="$HOME/.config/magi-workflow-workflow/config.json"
 ```
 
 If config missing → tell user to run `/magi.setup`.
+
+## 0.5. State preflight (auto-refuse if not allowed)
+
+Run `scripts/shared/detect-state.sh` and check `disallowed_skills["magi.go"]`.
+If present, surface reason + suggest in user's language and abort.
+
+```bash
+STATE_JSON=$(bash "$PLUGIN_ROOT/scripts/shared/detect-state.sh")
+blocked=$(jq -r '.disallowed_skills["magi.go"] // empty' <<<"$STATE_JSON")
+if [[ -n "$blocked" ]]; then
+  reason=$(jq -r '.disallowed_skills["magi.go"].reason' <<<"$STATE_JSON")
+  suggest=$(jq -r '.disallowed_skills["magi.go"].suggest' <<<"$STATE_JSON")
+  echo "Cannot run /magi.go: $reason"
+  echo "Suggested: $suggest"
+  exit 1
+fi
+hotfix=$(jq -r '.hotfix_mode' <<<"$STATE_JSON")
+```
+
+`--force` skips preflight (advanced/recovery only).
+
+If `hotfix=true`, the sprint has a HOTFIX.md and no TASKS.md is required.
+Build a single-task brief from HOTFIX.md (Repro / Root cause / Fix /
+Test) and dispatch directly — skip §1's TASKS.md scanning.
 
 ## 1. Locate sprint + task selection
 
@@ -107,21 +131,40 @@ End with DONE: <summary> or BLOCKED: <reason>, per agent system prompt.
 Use the Task tool with `subagent_type: magi-developer` (or whatever
 override the user passed via `--model`).
 
-**Sequential batch:**
+### 4a. Choose dispatch mode (auto-parallel by default)
+
+Default behavior is **auto-parallel**: analyze the batch and dispatch in
+parallel any tasks whose file scopes are demonstrably disjoint. Otherwise
+fall back to sequential. Flags can override:
+
+- `--parallel` → force parallel for the entire batch (trusts the user that
+  there are no hidden conflicts)
+- `--sequential` → force sequential (debug mode, simplest semantics)
+- (no flag) → auto: collect each task's "files in scope" from PLAN/SPEC
+  and the task description; group tasks with disjoint file sets into
+  parallel batches; tasks with any overlap or unclear scope run
+  sequentially. Tasks marked `🔀` in TASKS.md are a strong hint —
+  always-safe-to-parallelize as the author asserted.
+
+When in doubt, prefer sequential. False positives on parallelism cost
+hours of debugging; false negatives only cost wall-clock time.
+
+### 4b. Sequential dispatch (default for tasks with overlapping/unclear scope or `--sequential`)
 
 Dispatch one task. Wait for DONE/BLOCKED. Decide whether to continue:
 
 - DONE → continue to next task in batch.
 - BLOCKED → stop the batch, report to user, ask how to proceed.
 
-**Parallel batch (`--parallel` + lanes):**
+### 4c. Parallel dispatch (auto-detected disjoint sets, all `🔀` lanes, or `--parallel`)
 
-Dispatch all lanes in a single message (multiple Task tool uses). Wait for
-all to return. Aggregate results.
+Dispatch all parallel-safe tasks in a single message (multiple Task tool
+uses). Wait for all to return. Aggregate results.
 
 Lanes must touch **disjoint files**. Do not dispatch parallel lanes that
-contend on the same file — TASKS.md author should have caught this; if you
-spot it, abort and ask the user to re-decompose.
+contend on the same file. If auto-detection chose parallel but a runtime
+collision shows up (e.g., the same module appears in two diffs unexpectedly),
+abort and ask the user to re-decompose.
 
 ## 5. After each task / batch
 
@@ -150,16 +193,22 @@ captures decisions and observations that PLAN/SPEC/TASKS would not preserve.
 
 ## 7. Stop and hand off
 
-Tell the user:
+Tell the user, in their `output_language`:
 
 - What got done (link/cite tasks).
 - What test status looks like.
 - Recommended next step:
-  - More tasks remaining in this milestone → another `/magi.work` (or
-    auto-continue if user says so).
-  - Milestone done → `/magi.review-code` (multi-model MAGI by default) before
-    commit.
-  - Blocking issue → ask the user.
+
+| Outcome | Recommended next |
+|---------|------------------|
+| Some tasks remain in this milestone | `/magi.go` again (or auto-continue if user says so) |
+| Milestone done, more milestones remain | `/magi.go` (next milestone) |
+| All tasks done — sprint implementation complete | **`/magi.review-code` (mandatory — produces DRIFT.md required by `/magi.commit`)** |
+| BLOCKED | resolve the blocker; consider `/magi.plan --into <sprint>` to revise contract |
+
+Always mark `/magi.review-code` as **mandatory** in the hand-off message —
+it's not an optional review like `/magi.review-plan`; it produces
+`DRIFT.md` which `/magi.commit` requires.
 
 **Never commit on the user's behalf.** Wait for explicit instruction.
 
@@ -169,8 +218,12 @@ Tell the user:
   Opus for one specific complex task).
 - `--milestone N` — work on a specific milestone.
 - `--task T<m>.<n>` — work on a specific task (overrides milestone).
-- `--parallel` — dispatch lanes within a milestone in parallel.
+- `--parallel` — force parallel dispatch for the entire batch (overrides
+  auto-detection; trusts user there are no conflicts).
+- `--sequential` — force sequential dispatch for the entire batch (debug
+  mode; overrides auto-detection).
 - `--sprint <num>-<slug>` — target a specific sprint folder.
+- `--force` — skip §0.5 state preflight (advanced/recovery only).
 
 ## Conventions
 

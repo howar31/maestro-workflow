@@ -1,6 +1,6 @@
 ---
 name: magi.tasks
-description: Decompose a confirmed PLAN.md or SPEC.md into a TASKS.md milestone+checklist file in the same docs/<num>-<name>/ folder. Coordinator-only — does not write production code. Pauses for user confirmation before allowing /magi.work to start.
+description: Decompose a confirmed PLAN.md or SPEC.md into a TASKS.md milestone+checklist file in the same docs/<num>-<name>/ folder. Coordinator-only — does not write production code. Pauses for user confirmation before allowing /magi.go to start.
 disable-model-invocation: true
 ---
 
@@ -19,6 +19,32 @@ USER_CONFIG="$HOME/.config/magi-workflow-workflow/config.json"
 ```
 
 If `$USER_CONFIG` is missing, tell the user to run `/magi.setup` first.
+
+## 0.5. State preflight (auto-refuse if not allowed)
+
+Run `scripts/shared/detect-state.sh` and check whether `magi.tasks` is in
+the `disallowed_skills` map. If yes, present the reason + suggested next
+step in the user's `output_language` and abort.
+
+```bash
+STATE_JSON=$(bash "$PLUGIN_ROOT/scripts/shared/detect-state.sh")
+blocked=$(jq -r '.disallowed_skills["magi.tasks"] // empty' <<<"$STATE_JSON")
+if [[ -n "$blocked" ]]; then
+  reason=$(jq -r '.disallowed_skills["magi.tasks"].reason' <<<"$STATE_JSON")
+  suggest=$(jq -r '.disallowed_skills["magi.tasks"].suggest' <<<"$STATE_JSON")
+  echo "Cannot run /magi.tasks: $reason"
+  echo "Suggested: $suggest"
+  exit 1
+fi
+```
+
+After preflight passes, also surface any **staleness warnings** relevant
+to this skill. For `/magi.tasks`, watch for `stale_plan_review` (the
+review ran before the latest PLAN edit). If present, ask the user
+whether to re-run `/magi.review-plan` first or proceed anyway. Default
+proceed if the user just hits Enter.
+
+`--force` skips the entire preflight (advanced/recovery only).
 
 ## 1. Locate the sprint
 
@@ -65,7 +91,7 @@ Produce milestones + tasks following this shape (in `output_language`):
   context already in PLAN/SPEC + the task line.
 - For **parallelisable** work within a milestone, mark a `🔀` lane:
   `- [ ] 🔀 [A] T1.1 — ...` and `- [ ] 🔀 [B] T1.2 — ...`. Lanes [A] and [B]
-  must touch disjoint files. /magi.work can later dispatch parallel
+  must touch disjoint files. /magi.go can later dispatch parallel
   developers for `🔀` lanes.
 - Each task should imply at least one **test** that proves it. If the test is
   E2E or browser-based, note the recipe path (e.g. `# E2E: cypress/run.sh
@@ -85,18 +111,34 @@ If they want changes, iterate until they confirm.
 
 ## 5. Hand-off
 
-After confirmation:
+After confirmation, tell the user the next step in their `output_language`.
 
-1. Recommend the next step: `/magi.work` (or `/magi.review-plan` if
-   the PLAN was not yet reviewed).
-2. Do not run anything else automatically.
+Decision:
+
+- If `MAGI_PLAN_REVIEW.md` is **missing** for this sprint → suggest
+  `/magi.review-plan` (**optional**, can skip to save tokens) **or**
+  `/magi.go` directly if the user trusts the plan.
+- If `MAGI_PLAN_REVIEW.md` exists → suggest `/magi.go`.
+
+Example output:
+
+```
+✅ TASKS.md written to docs/03-profile-page/TASKS.md
+3 milestones, 8 tasks. Lane parallelism on T2.1+T2.2.
+
+下一步：
+  /magi.go            (派工 magi-developer 實作 — 預設自動偵測可平行的 task)
+  /magi.review-plan   (optional — 多模型審 plan，省 token 可跳過)
+```
+
+Do not run anything else automatically.
 
 ## Conventions
 
 - File name is uppercase: `TASKS.md`.
 - Task IDs are stable: `T<milestone>.<index>`. They survive iteration so
   WORKS.md can reference them.
-- Once `/magi.work` has started touching a TASKS.md, do not rewrite it
+- Once `/magi.go` has started touching a TASKS.md, do not rewrite it
   destructively in this skill — tell the user to revert + re-decompose, or
   edit specific tasks manually.
 

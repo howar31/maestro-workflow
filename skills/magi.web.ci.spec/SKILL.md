@@ -21,6 +21,23 @@ USER_CONFIG="$HOME/.config/magi-workflow-workflow/config.json"
 
 If config missing → tell user to run `/magi.setup`.
 
+
+## 0.5. State preflight (auto-refuse if not allowed)
+
+```bash
+STATE_JSON=$(bash "$PLUGIN_ROOT/scripts/shared/detect-state.sh")
+blocked=$(jq -r '.disallowed_skills["magi.web.ci.spec"] // empty' <<<"$STATE_JSON")
+if [[ -n "$blocked" ]]; then
+  reason=$(jq -r '.disallowed_skills["magi.web.ci.spec"].reason' <<<"$STATE_JSON")
+  suggest=$(jq -r '.disallowed_skills["magi.web.ci.spec"].suggest' <<<"$STATE_JSON")
+  echo "Cannot run /magi.web.ci.spec: $reason"
+  echo "Suggested: $suggest"
+  exit 1
+fi
+```
+
+`--force` skips preflight (advanced/recovery only).
+
 ## 1. Locate sprint + CI tool
 
 Find the sprint folder (default: most recent; or `--sprint <num>-<slug>`).

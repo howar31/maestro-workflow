@@ -21,7 +21,7 @@ The plugin uses three model classes; the right one for the right job:
 
 ### When to override
 
-- Bump `magi-developer` to **Opus** via `/magi.work --model opus`
+- Bump `magi-developer` to **Opus** via `/magi.go --model opus`
   when the task involves multi-module refactors, intricate algorithm work,
   or the developer reported BLOCKED citing complexity on first dispatch.
 - Drop the multi-CLI MAGI to single-Opus via `/magi.review-code --single`
@@ -223,7 +223,7 @@ gate.** The user is the final authority on:
 - PLAN approval (after `/magi.plan`)
 - TASKS approval (after `/magi.tasks`)
 - MAGI verdict acceptance (after `/magi.review-plan` or `/magi.review-code`)
-- Implementation acceptance (after each `/magi.work` batch)
+- Implementation acceptance (after each `/magi.go` batch)
 - Commit decision
 
 If a slash command is interrupted mid-flow, leave the artefacts in place

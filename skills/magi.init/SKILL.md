@@ -242,8 +242,20 @@ Skipped (user declined):
   ...
 ```
 
-Recommend the next step:
+Recommend the next step in the user's `output_language`. After init, the
+project is ready to start its first sprint:
 
+```
+✅ Bootstrap complete.
+
+下一步：
+  /magi.plan "<功能描述>"     (開始第一個 sprint)
+  /magi.plan                  (乾跑：從 docs/BACKLOG.md 挑既有項目)
+
+Tip: 先把 docs/PRD.md 與 docs/TECHSTACK.md 補完，/magi.plan 會用得到。
+```
+
+Suggestions by scenario:
 - If `docs/PRD.md` was just scaffolded → suggest user fill it in before
   `/magi.plan`.
 - If everything (or most things) already existed → suggest `/magi.plan` to

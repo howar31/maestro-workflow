@@ -175,4 +175,4 @@ SPEC.md a **Frontend** section structured as:
 
 Plus, when applicable, scaffold `tests/e2e/<feature>.spec.ts` with the
 template above (only the structure — actual selectors and assertions are
-the developer's job during `/magi.work`).
+the developer's job during `/magi.go`).

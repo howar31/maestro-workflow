@@ -6,11 +6,13 @@
 
 ## 特色
 
+- **🧭 自動引導，不用記指令** — 每個 skill 都做狀態 preflight；如果你跑了不對的指令，它告訴你正確的下一步。每個 skill 結束時主動建議下個動作。**你不用記 plan → tasks → work → review → commit 這套儀式，workflow 自己引導**
+- **🎯 智能 dispatcher** — `/magi.plan "<任何描述>"` 自動分類 type（feat/fix/hotfix/refactor/chore/docs/...）× scale（trivial/minor/major），路由到對應 artifact（PLAN/SPEC/TICKET/HOTFIX/no-artifact）。改 typo 不會跑出完整 PLAN.md，緊急修復走 fast-path
 - **多 CLI 並行審議** — `claude` / `gemini` / `codex` 在同一道閘門平行 fan-out，事件流協定 + quota / auth 自動降級
 - **MAGI 加權投票** — 4 種模式（majority / supermajority / unanimous / threshold）；reviewer 失敗時退化模式透明標示
-- **契約即真理 + 自動 drift 偵測** — `/magi.plan` 寫的 PLAN/SPEC 是凍結契約；`/magi.review-code` 自動比對 code 與契約，輸出 `DRIFT.md`（A 類違反 / B 類自由 / C 類觀察）；`/magi.commit` sprint mode 引導使用者把 A 類回填、C 類升級到 `docs/BACKLOG.md`
+- **契約即真理 + 自動 drift 偵測** — `/magi.plan` 寫的 PLAN/SPEC/TICKET/HOTFIX 是凍結契約；`/magi.review-code` 自動比對 code 與契約，輸出 `DRIFT.md`（A 類違反 / B 類自由 / C 類觀察）；`/magi.commit` sprint mode 引導使用者把 A 類回填、C 類升級到 `docs/BACKLOG.md`
 - **雙模式 commit** — `/magi.commit` 自動偵測 sprint context；feature work 走 sprint mode、chore/docs/小 fix 走 standalone mode，單一指令通吃所有 commit 情境
-- **領域中性** — 核心 slash command（init / plan / tasks / review-plan / work / review-code / commit / setup）不綁特定技術棧
+- **領域中性** — 核心 slash command（init / plan / tasks / review-plan / go / review-code / commit / setup）不綁特定技術棧
 - **Web 領域 add-ons** — frontend / backend / infra / ci 四個專用 spec skill，補強標準 SPEC.md
 - **零自動副作用** — 不偷偷 commit / push、不 apply infra、不 trigger deploy；每一步都會停下等使用者確認
 - **nvm 相容** — 避開 `#!/usr/bin/env node` 找錯版本的坑（macOS 常踩）
@@ -90,7 +92,7 @@ cd /opt/projects/magi-workflow
                                    # 或乾跑 /magi.plan 從 docs/BACKLOG.md 挑待 promote 項目
 /magi.review-plan                  # 多 CLI MAGI 審 plan
 /magi.tasks                        # 拆 TASKS.md
-/magi.work                         # 派工 magi-developer 實作
+/magi.go                         # 派工 magi-developer 實作
 /magi.review-code                  # 多 CLI MAGI 審 code 並自動產出 DRIFT.md（--single 退化單審）
 /magi.commit                       # sprint mode：A 類回填 PLAN/SPEC、C 類升級到 BACKLOG、可選 root 同步、conventional commits
                                    # standalone mode：chore/docs/小 fix 直接 commit（無 sprint context 時自動切換）
@@ -106,7 +108,7 @@ cd /opt/projects/magi-workflow
 /magi.web.ci.spec                  # 產出 CI.md + draft workflow YAML
 /magi.review-plan                  # 補完後再 review
 /magi.tasks
-/magi.work
+/magi.go
 /magi.review-code
 ```
 
@@ -154,7 +156,7 @@ flowchart TD
     UTasks -- ✓ --> Work
 
     subgraph ImplPhase["⚙️ 實作階段"]
-        Work["/magi.work<br/>dispatch magi-developer (Sonnet)<br/>TDD → WORKS.md"]
+        Work["/magi.go<br/>dispatch magi-developer (Sonnet)<br/>TDD → WORKS.md"]
     end
 
     Work --> XReviewCmd
@@ -225,18 +227,28 @@ flowchart LR
 
 ## 角色分工
 
+magi-workflow 內部有三個角色，**Reviewer 角色有兩種實作模式**——MAGI（多 CLI 並行）跟 `--single`（in-session subagent）：
+
 | 角色 | 模型 | 職責 | 不做 |
 |------|------|------|------|
-| **Coordinator**（main agent） | Opus（你的 Claude Code session） | 規劃、派工、驗收、文件同步、MAGI 投票收斂 | 不寫 production code |
-| **`magi-developer`** subagent | Sonnet | TDD 實作（紅 → 綠 → 重構）、產出 DONE / BLOCKED 報告 | 不做架構決策、不擴大範圍、不 commit |
-| **`magi-reviewer`** subagent | Opus | 防禦性 code review（`--single` 模式輸出 `SINGLE_CODE_REVIEW.md`，或 MAGI 退化時使用）+ drift detection（A/B/C 分類）寫進 `DRIFT.md` | 不修改檔案 |
-| **外部 CLI**（claude / gemini / codex） | 各家旗艦推理模型 | 多模型並行 review（plan + code 兩道閘門），輸出 `MAGI_PLAN_REVIEW.md` / `MAGI_CODE_REVIEW.md` / `DRIFT.md` | 各自獨立、不互相影響、coordinator 用加權投票收斂 |
+| **Coordinator**（main agent） | Opus（你的 Claude Code session） | 規劃、派工、驗收、dispatcher 分類、MAGI 投票收斂、drift 處理、commit 訊息產生 | 不寫 production code |
+| **Developer**（`magi-developer` subagent） | Sonnet | TDD 實作（紅 → 綠 → 重構）、產出 DONE / BLOCKED 報告 | 不做架構決策、不擴大範圍、不 commit |
+| **Reviewer**（兩種實作） | 看模式 | review code + drift detection 並產 `DRIFT.md` | 不修改檔案 |
+
+### Reviewer 兩種實作模式
+
+| 模式 | 觸發 | 實作 | 輸出 | 何時用 |
+|------|------|------|------|------|
+| **MAGI mode**（default） | `/magi.review-code`、`/magi.review-plan` | 多個外部 CLI（claude / gemini / codex）平行 fan-out + 加權投票 | `MAGI_PLAN_REVIEW.md` / `MAGI_CODE_REVIEW.md` + `DRIFT.md`（含跨模型共識） | 大部分情況；多模型角度互補 |
+| **`--single` mode** | `/magi.review-code --single` | `magi-reviewer` subagent（in-session Opus） | `SINGLE_CODE_REVIEW.md` + `DRIFT.md`（單一 reviewer） | 想省 token、外部 CLI 都不可用、debug |
+
+兩個模式都產出 `DRIFT.md`，所以下游 `/magi.commit` sprint mode 不需要關心是哪個模式產的。
 
 ### 為什麼選這組 model mix？
 
-- **Opus 當 Coordinator** — 規劃、派工、收斂多家審議結果需要長上下文與穩定推理；副作用大、值得用最強模型把關。
-- **Sonnet 當 magi-developer** — TDD 實作多是寫測試 + 產 code，需要快速迭代、低成本；Sonnet 對寫 code 已夠強，留 Opus 給更需要判斷的角色。
-- **三家並行審議** — 不同 LLM 觀點不同，會抓到不同類型的問題（claude 嚴謹、gemini 廣度、codex 偏實作細節）；單一模型容易盲點。MAGI 加權投票讓「多家共識」自動勝出，「單家極端意見」需要被多數推翻才採納。
+- **Opus 當 Coordinator** — 規劃、派工、dispatcher 分類、收斂多家審議結果需要長上下文與穩定推理；副作用大、值得用最強模型把關
+- **Sonnet 當 magi-developer** — TDD 實作多是寫測試 + 產 code，需要快速迭代、低成本；Sonnet 對寫 code 已夠強，留 Opus 給更需要判斷的角色
+- **三家並行審議**（MAGI mode） — 不同 LLM 觀點不同，會抓到不同類型的問題（claude 嚴謹、gemini 廣度、codex 偏實作細節）；單一模型容易盲點。MAGI 加權投票讓「多家共識」自動勝出，「單家極端意見」需要被多數推翻才採納
 
 > 想加新的 reviewer CLI（例如 `cursor` / `qwen`）？看 [`SPEC.md` § Adapter contract](SPEC.md#adapter-contract)，照契約實作 `--healthcheck` 與 `run` 兩個模式即可。
 
@@ -313,6 +325,28 @@ chmod +x .git/hooks/{commit-msg,pre-commit,pre-push}
 
 緊急 bypass：`MAGI_SKIP_HOOKS=1 git commit ...`
 
+## 我跑了不對的指令會怎樣？
+
+不會壞——每個 magi.* skill 進入時都會跑 `scripts/shared/detect-state.sh` 偵測專案當前狀態，發現你跑的指令不適用會明確告訴你「應該先跑哪個」。例如：
+
+```
+$ /magi.go
+Cannot run /magi.go: no TASKS.md and not a hotfix sprint (state=PLANNING)
+Suggested: /magi.tasks
+```
+
+或：
+
+```
+$ /magi.review-code
+Cannot run /magi.review-code: no diff to review (working tree clean)
+Suggested: make some changes or stage them first
+```
+
+每個指令結束時也會建議下一步——你可以單純照建議跑就好，不用記順序。
+
+需要繞過 preflight？所有 skill 都支援 `--force`（極少用，例如修壞的 sprint 從中段恢復）。
+
 ## Troubleshooting
 
 ### Reviewer 失敗時會發生什麼？
@@ -362,7 +396,7 @@ chmod +x .git/hooks/{commit-msg,pre-commit,pre-push}
 |------|------|
 | `/magi.plan` | `PLAN.md` 或 `SPEC.md`（依複雜度自動判斷） |
 | `/magi.tasks` | `TASKS.md` |
-| `/magi.work` | `WORKS.md` |
+| `/magi.go` | `WORKS.md` |
 | `/magi.review-plan` | `MAGI_PLAN_REVIEW.md` |
 | `/magi.review-code`（MAGI） | `MAGI_CODE_REVIEW.md` + `DRIFT.md`（一律產出，`Status: NONE`/`DETECTED`） |
 | `/magi.review-code --single` | `SINGLE_CODE_REVIEW.md` + `DRIFT.md` |

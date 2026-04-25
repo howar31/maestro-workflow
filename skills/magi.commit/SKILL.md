@@ -27,6 +27,27 @@ Confirm we are inside a git repo:
 git rev-parse --git-dir >/dev/null 2>&1 || { echo "not a git repo"; exit 1; }
 ```
 
+## 0.5. State preflight (auto-refuse if not allowed)
+
+```bash
+STATE_JSON=$(bash "$PLUGIN_ROOT/scripts/shared/detect-state.sh")
+blocked=$(jq -r '.disallowed_skills["magi.commit"] // empty' <<<"$STATE_JSON")
+if [[ -n "$blocked" ]]; then
+  reason=$(jq -r '.disallowed_skills["magi.commit"].reason' <<<"$STATE_JSON")
+  suggest=$(jq -r '.disallowed_skills["magi.commit"].suggest' <<<"$STATE_JSON")
+  echo "Cannot run /magi.commit: $reason"
+  echo "Suggested: $suggest"
+  exit 1
+fi
+```
+
+After preflight passes, surface the `stale_drift` warning if present —
+warn the user that the DRIFT.md is older than current code changes;
+recommend re-running `/magi.review-code` first or pass `--skip-review` to
+proceed anyway.
+
+`--force` skips preflight (advanced/recovery only).
+
 ## 1. Mode selection (preflight)
 
 Decide between **Sprint mode** and **Standalone mode** by inspecting:
@@ -244,7 +265,7 @@ After a successful commit:
   > something else.
 
 - If the sprint has remaining unchecked tasks in TASKS.md, suggest
-  `/magi.work` for the next batch.
+  `/magi.go` for the next batch.
 
 - If TASKS.md is fully checked, suggest the sprint is complete; user can
   open a new sprint.

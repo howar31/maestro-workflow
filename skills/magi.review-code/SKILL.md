@@ -1,6 +1,6 @@
 ---
 name: magi.review-code
-description: Review the current git diff. Default behaviour is multi-CLI MAGI cross-review (orchestrator + magi-consensus). Use --single to fall back to a single Opus reviewer (the magi-reviewer subagent) — saves tokens but loses cross-validation. Supports --magi <mode> override and --reviewers override. Never auto-fixes; always presents findings for the user to decide.
+description: Review the current git diff and produce DRIFT.md when a sprint context exists. **Mandatory before /magi.commit in sprint mode** — DRIFT.md is required input for the commit step's drift backfill flow. Default behaviour is multi-CLI MAGI cross-review (orchestrator + magi-consensus). Use --single to fall back to a single Opus reviewer (the magi-reviewer subagent) — saves tokens but loses cross-validation. Supports --magi <mode> override and --reviewers override. Never auto-fixes; always presents findings for the user to decide.
 disable-model-invocation: true
 ---
 
@@ -25,6 +25,23 @@ Confirm we are inside a git repo:
 ```bash
 git rev-parse --git-dir >/dev/null 2>&1 || { echo "not a git repo"; exit 1; }
 ```
+
+## 0.5. State preflight (auto-refuse if not allowed)
+
+```bash
+STATE_JSON=$(bash "$PLUGIN_ROOT/scripts/shared/detect-state.sh")
+blocked=$(jq -r '.disallowed_skills["magi.review-code"] // empty' <<<"$STATE_JSON")
+if [[ -n "$blocked" ]]; then
+  reason=$(jq -r '.disallowed_skills["magi.review-code"].reason' <<<"$STATE_JSON")
+  suggest=$(jq -r '.disallowed_skills["magi.review-code"].suggest' <<<"$STATE_JSON")
+  echo "Cannot run /magi.review-code: $reason"
+  echo "Suggested: $suggest"
+  exit 1
+fi
+```
+
+`--force` skips preflight. The most common refusal: no diff to review
+(working tree clean and nothing staged) — make changes first.
 
 ## 1. Determine the diff scope
 
@@ -268,7 +285,7 @@ If verdict = APPROVE-WITH-NITS: list nits and ask user whether to address
 before commit (or note they can defer). Then `/magi.commit`.
 
 If verdict = REQUEST-CHANGES: enumerate critical issues and recommend
-`/magi.work --task <id>` (or manual edit) to address. Do not commit.
+`/magi.go --task <id>` (or manual edit) to address. Do not commit.
 
 If DRIFT.md status = DETECTED, also tell the user the count of A / B / C
 items so they know what `/magi.commit` will prompt them to handle.
