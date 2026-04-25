@@ -32,6 +32,7 @@ Every command does a **state preflight** via `scripts/shared/detect-state.sh` an
 | `/magi.go` | Dispatches `magi-developer` (Sonnet) per task. **Default auto-parallelizes** disjoint tasks; `--parallel` forces, `--sequential` overrides | per work session | yes (before commit) |
 | `/magi.review-code` | Multi-CLI MAGI on git diff; produces `DRIFT.md` (Status: NONE/DETECTED) when a sprint context exists | **mandatory** in sprint flow (DRIFT.md is required by `/magi.commit`) | yes (verdict to user) |
 | `/magi.commit` | Stage + commit. Sprint mode: A-class drift backfill into PLAN/SPEC, C-class promotion to `docs/BACKLOG.md`, optional root-doc sync, Conventional Commits. Standalone mode for chore/docs/small fixes | per commit | yes (confirm message) |
+| `/magi.yolo` | **Headless / walk-away mode**. Fresh (`<desc>`) or Resume (`--resume`). Runs plan→tasks→work→review-code→commit pipeline without prompts; resume mode skips already-completed phases. Conservative auto-decisions, audit log in `<sprint>/YOLO_LOG.md`. `--push` optionally pushes (refused on default branch). Aborts on any failure | opt-in | **no prompts** (intentional) |
 
 ### Web-domain elaborations (run between `/magi.plan` and `/magi.tasks`)
 

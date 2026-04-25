@@ -39,6 +39,7 @@ Decision rule: "Want to see it on first opening the repo?" → Tier 1. "Referenc
 | E | Canonical `references/AGENTS.md` + optional git hooks | ✅ done |
 | F-Phase 1 | Drift detection (`/magi.review-code` + `magi-reviewer`) + `/magi.commit` (dual-mode) + `/magi.init` (bootstrap) + `/magi.plan` backlog awareness | ✅ done |
 | F-Phase 2 | `/magi.work` → `/magi.go` rename, `scripts/shared/detect-state.sh` (single-source state model), state-aware preflight + handoff in every skill, `/magi.plan` dispatcher (type/scale × routing), TICKET.md + HOTFIX.md templates, `/magi.go` auto-parallel default | ✅ done |
+| F-Phase 3 | `/magi.yolo` headless walk-away mode (fresh + resume modes; full pipeline without prompts; conservative auto-decisions; YOLO_LOG audit; abort-on-failure; `--push` with default-branch safety) | ✅ done |
 
 ## Slash commands (Phase B)
 
@@ -56,6 +57,7 @@ orchestrator + magi-consensus shell scripts and to the two subagents below.
 | `/magi.go [--milestone N \| --task T<m>.<n>] [--parallel] [--model ...]` | Read TASKS.md, dispatch `magi-developer` per task (or per `🔀` lane in parallel), aggregate DONE/BLOCKED, append to WORKS.md, pause before commit. |
 | `/magi.review-code [--single] [--magi <mode>] [--diff <range>]` | Default: orchestrator + MAGI on `git diff`. `--single`: dispatch `magi-reviewer` only. Reviewer prompt includes per-feature PLAN/SPEC; reviewers output `## Drift from contract` (A/B/C). Writes `MAGI_CODE_REVIEW.md` (or `SINGLE_CODE_REVIEW.md`) **and** `<sprint>/DRIFT.md` (always, with `Status: NONE`/`DETECTED` header). Never auto-commits. |
 | `/magi.commit [push] [--mode sprint\|standalone] [--sprint <slug>] [--skip-review] [--no-root-sync] [--root-sync-strict]` | Auto-detects mode. **Sprint mode**: read `<sprint>/DRIFT.md`, prompt user per A-class to backfill PLAN/SPEC, prompt per C-class to promote to `docs/BACKLOG.md`. Then optional Level-2 root-doc sync. Generate Conventional Commits message. **Standalone mode**: skip drift; root-sync detection + commit. Single commit per invocation; never auto-commits. |
+| `/magi.yolo "<desc>" \| --resume [...]` | Headless / walk-away mode. **Fresh** (`<desc>` given): create new sprint, run plan→tasks→work→review-code→commit. **Resume** (`--resume`): continue existing sprint from current state, skipping completed phases. Refused in BOOTSTRAP. Auto-decisions: drift A auto-ignore, drift C auto-promote, root-sync auto-skip, commit message auto-generated. `--push` refused on default branch unless explicitly allowed. Audit log at `<sprint>/YOLO_LOG.md`. Aborts and preserves state on any failure. |
 
 ## Subagents (Phase C — folded into B)
 
@@ -320,6 +322,154 @@ Hotfix flow: `/magi.plan` → HOTFIX.md → **`/magi.go`** (skip `/magi.tasks`) 
 | `TICKET.md` | `/magi.tasks` directly |
 | `HOTFIX.md` | `/magi.go` directly (fast-path) |
 | (no artifact) | `/magi.commit` standalone after edit |
+
+## yolo mode (Phase 3)
+
+`/magi.yolo` is a separate skill (intentionally not folded into `/magi.plan`) that runs the pipeline without user prompts. Designed for walk-away convenience, simple repetitive tasks, and CI/scheduled-job usage where there's no human session to confirm anything.
+
+### Two modes
+
+| Invocation | Mode | Use case |
+|-----------|------|----------|
+| `/magi.yolo "<desc>"` | **Fresh** | Start a new sprint and run the entire pipeline |
+| `/magi.yolo --resume` | **Resume** | Continue an existing sprint (latest by default, or `--sprint <slug>`) from its current state, skipping phases already done |
+
+Modes are mutually exclusive. Missing both → error with usage hint.
+
+### Resume mode phase-skipping
+
+| Sprint state at invocation | First phase yolo runs | Phases skipped |
+|---------------------------|----------------------|----------------|
+| PLANNING | tasks | plan |
+| PLAN_REVIEWED | tasks | plan, review-plan |
+| TASKS_READY | work | plan, tasks |
+| IN_PROGRESS | work (continues undone) | plan, tasks |
+| WORK_DONE | review-code | plan, tasks, work |
+| CODE_REVIEWED | commit | plan, tasks, work, review-code |
+
+Resume detects state via `scripts/shared/detect-state.sh` and uses the JSON output to decide which phase to enter at. Continuation at `IN_PROGRESS` works naturally because `/magi.go` already picks the next batch of `- [ ]` tasks.
+
+### Pipeline (fresh mode; resume mode skips completed phases)
+
+```
+/magi.yolo "<desc>" [--push]            (or --resume)
+  → §0.5 state preflight (refuse in BOOTSTRAP)
+  → §0.6 mode determination (fresh vs resume; map state → entry phase)
+  → §0.7 branch safety read
+  → init YOLO_LOG.md
+  → plan phase        (skipped in resume)
+  → tasks phase       (skipped if entering at TASKS_READY+)
+  → work phase        (skipped if entering at WORK_DONE+)
+  → review-code phase (skipped if entering at CODE_REVIEWED)
+  → commit phase      (always runs unless aborted)
+  → push phase        (only with --push; default-branch safety)
+  → final report + YOLO_LOG SUCCESS / ABORTED status
+```
+
+### Auto-decision matrix
+
+The user is walking away, so every gate must have a default. Yolo's defaults bias toward **non-destructive**: don't silently modify state that requires judgment.
+
+| Gate | Manual mode | Yolo default | Why |
+|------|------------|-------------|-----|
+| Plan classification confirm | user reviews + adjusts | accept own classification | LLM judgment is the input the user provided indirectly via description |
+| TASKS.md confirm | user reviews + edits | accept own decomposition | same |
+| Drift A (contract violations) | per-item prompt to backfill | **auto-IGNORE** | modifying PLAN/SPEC unsupervised is destructive; record in DRIFT.md only |
+| Drift B (below-the-contract) | not prompted | retain in DRIFT.md as audit | unchanged from manual |
+| Drift C (out-of-scope) | per-item prompt to promote | **auto-PROMOTE** to BACKLOG | append-only, safe |
+| Root-doc sync | prompt with detected triggers | **auto-SKIP** | root docs are project-wide; touching them needs supervision |
+| Commit message | user reviews + edits | main agent generates from PLAN/diff | walk-away can't review |
+| Push | user confirms (or `push` arg) | refused on default branch unless `--allow-push-to-default-branch`; never `--force` | safety rail against unsupervised main-branch overwrites |
+
+### Branch safety
+
+| Branch | Commit OK? | Push OK? |
+|--------|-----------|----------|
+| Feature branch | yes | yes (if `--push`) |
+| `main` / `master` (default) | yes | **refused** unless `--push --allow-push-to-default-branch` |
+
+Yolo never `--force` pushes. If push is rejected (non-fast-forward), commit stays local; YOLO_LOG records the rejection.
+
+### Abort policy
+
+Any of the following triggers immediate abort with state preservation:
+
+- BOOTSTRAP state (refused at preflight, before any work)
+- Sprint-folder creation conflict (slug collision with existing dir)
+- magi-developer BLOCKED on any task
+- Project test command fails after work phase (regression)
+- `/magi.review-code` verdict REQUEST-CHANGES
+- `/magi.review-code` policy_pass=false (required reviewer failed)
+- `git commit` hook failure
+- `git push` rejected (only when `--push`)
+
+On abort, yolo:
+1. Writes ABORTED status + reason + recovery hint into YOLO_LOG.md
+2. Leaves all intermediate artifacts (PLAN/SPEC/TICKET/HOTFIX, TASKS.md, WORKS.md, DRIFT.md if produced) in place
+3. Prints recovery instructions to user in their `output_language`
+4. Exits non-zero so calling scripts (CI) can detect failure
+
+Yolo **never** retries automatically, never auto-fixes, never tries to "be smart" about recovery — that's the manual flow's job.
+
+### YOLO_LOG.md schema
+
+Each yolo invocation writes one log file at `<sprint_dir>/YOLO_LOG.md`. Append-only as the run progresses; final status is set at the end (or at abort).
+
+```markdown
+# YOLO Run — <sprint slug> @ <ISO 8601>
+
+> Invoked: `/magi.yolo "<description>" [--flags]`
+> Branch: <current_branch>  •  Default branch: <default_branch>
+> Status: SUCCESS | ABORTED at <phase> | RUNNING
+
+## plan
+- Classification: <type> / <scale> → <artifact>
+- Sprint folder: docs/<num>-<slug>/
+- Artifact written: <path>
+
+## tasks
+- Milestones: <N>
+- Tasks: <M>
+- Skipped: <yes if hotfix/no-artifact>
+
+## work
+- Dispatch mode: <X parallel batches + Y sequential>
+- Tasks DONE: <count>
+- Test result: <pass>/<total> or N/A
+- BLOCKED: <none | task ID and reason>
+
+## review-code
+- Mode: MAGI / single
+- Verdict: APPROVE | APPROVE-WITH-NITS | REQUEST-CHANGES
+- DRIFT status: NONE | DETECTED (A:<n> B:<n> C:<n>)
+
+## commit decisions (auto)
+- A class: <count> auto-ignored
+- C class: <count> auto-promoted to BACKLOG.md
+- Root sync: auto-skipped (or N/A if no triggers detected)
+- Commit message: <generated>
+- Commit SHA: <short-sha>
+
+## push
+- Requested: yes | no
+- Pushed: yes | no | refused (<reason>)
+
+## recovery (on abort only)
+<step-by-step instructions to resume manually>
+```
+
+### When to use yolo
+
+- ✅ Mechanical tasks: dep upgrade, typo fixes, auto-generated patches
+- ✅ CI / scheduled jobs (no human to prompt)
+- ✅ User has run the manual flow before and trusts the dispatcher's judgment for this kind of task
+- ❌ Major architectural changes (no human watching is dangerous)
+- ❌ Exploratory work where the user wants to read review feedback and iterate
+- ❌ First-time users (run manual flow a few times before opting in to yolo)
+
+### Relationship to manual flow
+
+Yolo and the manual flow share **all artifacts** (PLAN/SPEC/TICKET/HOTFIX, TASKS.md, WORKS.md, DRIFT.md, MAGI_CODE_REVIEW.md, BACKLOG.md updates). The only yolo-specific artifact is `YOLO_LOG.md`. After a yolo run, the resulting sprint folder is indistinguishable from a manual run except for the audit log — meaning users can drop back to manual flow at any sprint that started with yolo, e.g., for a follow-up `/magi.go` to add tests.
 
 ## /magi.go auto-parallel (Phase 2)
 

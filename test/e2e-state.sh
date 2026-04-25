@@ -62,6 +62,7 @@ JSON=$(run_in "$T")
 assert_eq "state" "BOOTSTRAP" "$(jq -r .state <<<"$JSON")"
 assert_eq "magi.tasks disallowed" "true" "$(jq -r '.disallowed_skills["magi.tasks"] != null' <<<"$JSON")"
 assert_eq "magi.go disallowed" "true" "$(jq -r '.disallowed_skills["magi.go"] != null' <<<"$JSON")"
+assert_eq "magi.yolo disallowed in BOOTSTRAP" "true" "$(jq -r '.disallowed_skills["magi.yolo"] != null' <<<"$JSON")"
 assert_eq "magi.init allowed" "true" "$(jq -r '.allowed_skills | index("magi.init") != null' <<<"$JSON")"
 assert_eq "magi.plan allowed (warned not blocked)" "true" "$(jq -r '.allowed_skills | index("magi.plan") != null' <<<"$JSON")"
 cleanup "$T"
@@ -75,6 +76,7 @@ JSON=$(run_in "$T")
 assert_eq "state" "INITIALIZED" "$(jq -r .state <<<"$JSON")"
 assert_eq "magi.tasks disallowed" "true" "$(jq -r '.disallowed_skills["magi.tasks"] != null' <<<"$JSON")"
 assert_eq "magi.commit allowed (has untracked diff)" "true" "$(jq -r '.allowed_skills | index("magi.commit") != null' <<<"$JSON")"
+assert_eq "magi.yolo allowed in INITIALIZED" "true" "$(jq -r '.allowed_skills | index("magi.yolo") != null' <<<"$JSON")"
 cleanup "$T"
 
 # ── Case 3: PLANNING ─────────────────────────────────────────────────────

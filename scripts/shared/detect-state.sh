@@ -217,7 +217,7 @@ if [[ "$SPRINT_WORKS" == true && "$SPRINT_TASKS" == false ]]; then
 fi
 
 # ── Compute allowed/disallowed skills for this state ──────────────────────
-ALL_SKILLS=(magi.setup magi.init magi.plan magi.tasks magi.review-plan magi.go magi.review-code magi.commit magi.web.frontend.spec magi.web.backend.spec magi.web.infra.plan magi.web.ci.spec)
+ALL_SKILLS=(magi.setup magi.init magi.plan magi.tasks magi.review-plan magi.go magi.review-code magi.commit magi.yolo magi.web.frontend.spec magi.web.backend.spec magi.web.infra.plan magi.web.ci.spec)
 
 ALLOWED_JSON="[]"
 DISALLOWED_JSON="{}"
@@ -308,6 +308,15 @@ else
   disallow "magi.commit" \
     "no diff to commit and no CODE_REVIEWED sprint" \
     "make changes or run /magi.review-code first"
+fi
+
+# magi.yolo: headless full-pipeline runner; allowed in any state except BOOTSTRAP
+if [[ "$STATE" == "BOOTSTRAP" ]]; then
+  disallow "magi.yolo" \
+    "project not initialized (state=BOOTSTRAP) — yolo needs at least root docs to anchor a sprint" \
+    "/magi.init"
+else
+  allow "magi.yolo"
 fi
 
 # magi.web.* — same gating as magi.tasks (need PLANNING+)
