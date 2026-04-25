@@ -92,7 +92,7 @@ Ask the user for a default voting mode:
   user that pairing `unanimous` with `required: false` reviewers makes
   sense only if they are aware that a SKIP will abort.
 
-Per-invocation override is always possible via `/maestro.review --magi <mode>`,
+Per-invocation override is always possible via `/maestro.review-code --magi <mode>`,
 so this is just the default.
 
 ## 5. Node / nvm
@@ -130,7 +130,7 @@ PROMPT=$(mktemp -t maestro-setup-prompt.XXXXXX.md)
 echo "Setup validation: please reply with 'maestro setup OK from <your-cli-name>'." > "$PROMPT"
 
 MAESTRO_CONFIG_PATH="$USER_CONFIG" \
-  "$PLUGIN_ROOT/skills/maestro.xreview-plan/scripts/orchestrator.sh" "$PROMPT"
+  "$PLUGIN_ROOT/skills/maestro.review-plan/scripts/orchestrator.sh" "$PROMPT"
 
 rm -f "$PROMPT"
 ```

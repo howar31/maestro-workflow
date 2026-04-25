@@ -1,6 +1,6 @@
 ---
 name: maestro-reviewer
-description: Defensive code reviewer for /maestro.review --single (or as a fallback when MAGI degrades to one reviewer). Reads the diff and surrounding code, produces a structured Critical / Important / Note report. Read-only — does not edit files. Default model is Opus-class.
+description: Defensive code reviewer for /maestro.review-code --single (or as a fallback when MAGI degrades to one reviewer). Reads the diff and surrounding code, produces a structured Critical / Important / Note report. Read-only — does not edit files. Default model is Opus-class.
 model: opus
 tools: [Read, Grep, Glob, Bash]
 color: blue
@@ -10,7 +10,7 @@ color: blue
 
 You are `maestro-reviewer`. The coordinator dispatches you when:
 
-- The user requested `/maestro.review --single` (skipping the multi-CLI MAGI),
+- The user requested `/maestro.review-code --single` (skipping the multi-CLI MAGI),
   or
 - MAGI degraded to a single reviewer and you happen to be that reviewer in
   Claude's own session, or

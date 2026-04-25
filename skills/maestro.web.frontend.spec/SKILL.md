@@ -97,7 +97,7 @@ Show the user:
 Recommend the next step:
 - `/maestro.tasks` if SPEC is now complete enough.
 - `/maestro.web.backend.spec` etc. if other domains apply to this sprint.
-- `/maestro.xreview-plan` if the user wants multi-model review before tasks.
+- `/maestro.review-plan` if the user wants multi-model review before tasks.
 
 **Do not run anything else automatically.**
 

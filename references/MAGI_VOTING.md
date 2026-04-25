@@ -2,7 +2,7 @@
 
 Canonical rules for the coordinator agent when consolidating multi-reviewer
 output into a final verdict. Read this once at the start of any
-`/maestro.xreview-plan` or `/maestro.review` invocation.
+`/maestro.review-plan` or `/maestro.review-code` invocation.
 
 ## Inputs
 

@@ -85,7 +85,7 @@ fi
 (( ${#REVIEWERS[@]} == 0 )) && { echo "no reviewers configured" >&2; exit 3; }
 
 # ── Workdir ────────────────────────────────────────────────────────────────
-WORKDIR="${MAESTRO_XREVIEW_WORKDIR:-$(mktemp -d -t maestro-xreview.XXXXXX)}"
+WORKDIR="${MAESTRO_REVIEW_WORKDIR:-$(mktemp -d -t maestro-review.XXXXXX)}"
 mkdir -p "$WORKDIR"
 EVENTS_LOG="$WORKDIR/events.log"
 : >"$EVENTS_LOG"

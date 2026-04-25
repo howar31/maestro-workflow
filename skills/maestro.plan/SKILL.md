@@ -74,7 +74,7 @@ Explain in enough detail that a reviewer (and future you) can sanity check.
 Include code paths, data shape changes, and any new dependencies.
 
 ## Open questions
-What remains uncertain. The /maestro.xreview-plan step should help resolve.
+What remains uncertain. The /maestro.review-plan step should help resolve.
 
 ## Verification
 How we will know the implementation is correct.
@@ -118,7 +118,7 @@ mkdir -p "docs/<num>-<slug>"
 ```
 
 After writing, **stop and ask the user to confirm**. Do not auto-trigger
-`/maestro.xreview-plan`. The user is the gate.
+`/maestro.review-plan`. The user is the gate.
 
 If the user wants edits, iterate until they confirm.
 
@@ -127,7 +127,7 @@ If the user wants edits, iterate until they confirm.
 When the user confirms the document:
 
 1. Tell them the next recommended step:
-   - `/maestro.xreview-plan` — multi-model review of this PLAN/SPEC.
+   - `/maestro.review-plan` — multi-model review of this PLAN/SPEC.
 2. Do not run it automatically.
 
 ## Conventions

@@ -9,7 +9,7 @@ set -uo pipefail
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(cd "$TEST_DIR/.." && pwd)"
 
-ORCHESTRATOR="$PLUGIN_ROOT/skills/maestro.xreview-plan/scripts/orchestrator.sh"
+ORCHESTRATOR="$PLUGIN_ROOT/skills/maestro.review-plan/scripts/orchestrator.sh"
 MAGI="$PLUGIN_ROOT/scripts/shared/magi-consensus.sh"
 
 PROMPT_FILE=$(mktemp -t maestro-prompt.XXXXXX.md)

@@ -87,7 +87,7 @@ If they want changes, iterate until they confirm.
 
 After confirmation:
 
-1. Recommend the next step: `/maestro.work` (or `/maestro.xreview-plan` if
+1. Recommend the next step: `/maestro.work` (or `/maestro.review-plan` if
    the PLAN was not yet reviewed).
 2. Do not run anything else automatically.
 

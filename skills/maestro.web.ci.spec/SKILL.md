@@ -162,7 +162,7 @@ Show the user:
 
 Recommend next:
 - Manual review of the draft workflow.
-- `/maestro.xreview-plan` to have other models inspect it.
+- `/maestro.review-plan` to have other models inspect it.
 - After review, user moves the file to its real location and opens a PR.
 
 **Never push the workflow to its live location, never trigger a build,

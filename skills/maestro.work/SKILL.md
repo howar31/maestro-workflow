@@ -35,7 +35,7 @@ Read `TASKS.md`. Determine the next batch of work:
   sequentially.
 
 If nothing is left to do, tell the user the sprint is complete and suggest
-`/maestro.review`.
+`/maestro.review-code`.
 
 ## 2. Read context
 
@@ -157,7 +157,7 @@ Tell the user:
 - Recommended next step:
   - More tasks remaining in this milestone → another `/maestro.work` (or
     auto-continue if user says so).
-  - Milestone done → `/maestro.review` (multi-model MAGI by default) before
+  - Milestone done → `/maestro.review-code` (multi-model MAGI by default) before
     commit.
   - Blocking issue → ask the user.
 

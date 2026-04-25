@@ -1,10 +1,10 @@
 ---
-name: maestro.review
+name: maestro.review-code
 description: Review the current git diff. Default behaviour is multi-CLI MAGI cross-review (orchestrator + magi-consensus). Use --single to fall back to a single Opus reviewer (the maestro-reviewer subagent) — saves tokens but loses cross-validation. Supports --magi <mode> override and --reviewers override. Never auto-fixes; always presents findings for the user to decide.
 disable-model-invocation: true
 ---
 
-# /maestro.review — code review (MAGI by default)
+# /maestro.review-code — code review (MAGI by default)
 
 You are the coordinator. Review the current uncommitted change set (or a
 specified diff) and produce a structured verdict. Default: multi-CLI MAGI.
@@ -123,8 +123,8 @@ Invoke orchestrator:
 
 ```bash
 WORKDIR=$(mktemp -d -t maestro-review.XXXXXX)
-MAESTRO_XREVIEW_WORKDIR="$WORKDIR" \
-  "$PLUGIN_ROOT/skills/maestro.xreview-plan/scripts/orchestrator.sh" \
+MAESTRO_REVIEW_WORKDIR="$WORKDIR" \
+  "$PLUGIN_ROOT/skills/maestro.review-plan/scripts/orchestrator.sh" \
   "$workdir/review-prompt.md" \
   $reviewer_args
 ```
@@ -137,7 +137,7 @@ Stream events to user. Then run consensus:
 ```
 
 Apply MAGI rules per `references/MAGI_VOTING.md` (semantic dedup +
-weighted voting). Same procedure as `/maestro.xreview-plan` step 6.
+weighted voting). Same procedure as `/maestro.review-plan` step 6.
 
 If `policy_pass=false`:
 

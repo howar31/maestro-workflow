@@ -24,7 +24,7 @@ The plugin uses three model classes; the right one for the right job:
 - Bump `maestro-developer` to **Opus** via `/maestro.work --model opus`
   when the task involves multi-module refactors, intricate algorithm work,
   or the developer reported BLOCKED citing complexity on first dispatch.
-- Drop the multi-CLI MAGI to single-Opus via `/maestro.review --single`
+- Drop the multi-CLI MAGI to single-Opus via `/maestro.review-code --single`
   when iterating quickly on tiny diffs and saving tokens matters.
 
 Never hard-code a specific model version (e.g. `claude-opus-4-7`). Use the
@@ -222,7 +222,7 @@ gate.** The user is the final authority on:
 
 - PLAN approval (after `/maestro.plan`)
 - TASKS approval (after `/maestro.tasks`)
-- MAGI verdict acceptance (after `/maestro.xreview-plan` or `/maestro.review`)
+- MAGI verdict acceptance (after `/maestro.review-plan` or `/maestro.review-code`)
 - Implementation acceptance (after each `/maestro.work` batch)
 - Commit decision
 
@@ -266,7 +266,7 @@ To set expectations and avoid scope creep:
 | Subagent reported BLOCKED | Surface to user; do not silently retry. |
 | Tests fail after `maestro-developer` reported DONE | Treat as regression; do not silently fix; ask user. |
 | Workflow file already exists at the live path during `/maestro.web.ci.spec` | Write the draft to the sprint dir only; never overwrite live workflows. |
-| User asks for a commit before `/maestro.review` finished | Tell them review is incomplete; ask whether to skip review (defaults to no). |
+| User asks for a commit before `/maestro.review-code` finished | Tell them review is incomplete; ask whether to skip review (defaults to no). |
 
 ## 11. Versioning and updates to these guidelines
 

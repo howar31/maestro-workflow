@@ -161,7 +161,7 @@ Show the user:
 - Whether the change is reversible
 
 Recommend next:
-- If risks are 🔴: have user re-run `/maestro.xreview-plan` so other models
+- If risks are 🔴: have user re-run `/maestro.review-plan` so other models
   also see the IAM diff.
 - If clean: tell user the apply commands they should run themselves
   (DO NOT run them).

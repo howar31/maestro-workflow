@@ -144,7 +144,7 @@ Show the user:
 Recommend next step:
 - `/maestro.tasks` if SPEC is complete.
 - `/maestro.web.frontend.spec` / `.infra.plan` / `.ci.spec` if relevant.
-- `/maestro.xreview-plan` for multi-model review.
+- `/maestro.review-plan` for multi-model review.
 
 ## Argument parsing
 

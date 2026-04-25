@@ -35,16 +35,16 @@ orchestrator + magi-consensus shell scripts and to the two subagents below.
 | `/maestro.setup [--reset \| --recheck]` | Healthcheck CLIs via `preflight.sh`, ask user for reviewer roster + weights + MAGI mode + nvm version + output language, write `~/.config/maestro-workflow/config.json`, validate with a tiny dry-run via the orchestrator. |
 | `/maestro.plan [slug] "<desc>"` | Resolve `docs/<num>-<slug>/`, read project context (PRD/TECHSTACK/CLAUDE/AGENTS), decide PLAN.md vs SPEC.md, draft, pause for user confirmation. |
 | `/maestro.tasks [<num>-<slug>] [--milestones N]` | Read PLAN/SPEC, write TASKS.md with milestones + atomic tasks, mark `🔀` lanes for parallelisable work, pause for confirmation. |
-| `/maestro.xreview-plan [--reviewers ...] [--magi <mode>]` | Build review prompt from PLAN/SPEC, invoke orchestrator, run magi-consensus, then **the coordinator** applies semantic dedup + weighted vote per `references/MAGI_VOTING.md`, writes `MAGI_PLAN_REVIEW.md`. |
+| `/maestro.review-plan [--reviewers ...] [--magi <mode>]` | Build review prompt from PLAN/SPEC, invoke orchestrator, run magi-consensus, then **the coordinator** applies semantic dedup + weighted vote per `references/MAGI_VOTING.md`, writes `MAGI_PLAN_REVIEW.md`. |
 | `/maestro.work [--milestone N \| --task T<m>.<n>] [--parallel] [--model ...]` | Read TASKS.md, dispatch `maestro-developer` per task (or per `🔀` lane in parallel), aggregate DONE/BLOCKED, append to WORKS.md, pause before commit. |
-| `/maestro.review [--single] [--magi <mode>] [--diff <range>]` | Default: orchestrator + MAGI on `git diff`. `--single`: dispatch `maestro-reviewer` only. Writes `MAGI_CODE_REVIEW.md` or `SINGLE_CODE_REVIEW.md`. Never auto-commits. |
+| `/maestro.review-code [--single] [--magi <mode>] [--diff <range>]` | Default: orchestrator + MAGI on `git diff`. `--single`: dispatch `maestro-reviewer` only. Writes `MAGI_CODE_REVIEW.md` or `SINGLE_CODE_REVIEW.md`. Never auto-commits. |
 
 ## Subagents (Phase C — folded into B)
 
 | Agent | Model | Tools | Role |
 |-------|-------|-------|------|
 | `maestro-developer` | `sonnet` | Read, Write, Edit, Bash, Grep, Glob | TDD-first implementation worker. Receives a self-contained task brief from `/maestro.work`. Reports `DONE` or `BLOCKED`. Forbidden from architecture changes, scope expansion, commits, or package upgrades. |
-| `maestro-reviewer` | `opus` | Read, Grep, Glob, Bash (read-only) | Defensive code reviewer for `/maestro.review --single` and degraded-MAGI fallback. Outputs Verdict + 🔴 Critical / 🟡 Important / 🟢 Note. Never edits files. |
+| `maestro-reviewer` | `opus` | Read, Grep, Glob, Bash (read-only) | Defensive code reviewer for `/maestro.review-code --single` and degraded-MAGI fallback. Outputs Verdict + 🔴 Critical / 🟡 Important / 🟢 Note. Never edits files. |
 
 ## Override flags (Phase B)
 
@@ -53,12 +53,12 @@ Every slash command supports its applicable subset:
 | Flag | Applies to | Effect |
 |------|-----------|--------|
 | `--model <name>` | plan, tasks, work, review | Override the active model for this invocation. |
-| `--magi <mode>` | xreview-plan, review | Override MAGI mode (`majority` / `supermajority` / `unanimous` / `threshold:<N>`). |
-| `--reviewers <list>` | xreview-plan, review | Override the reviewer roster: `claude:opus,gemini:default,...`. |
+| `--magi <mode>` | review-plan, review | Override MAGI mode (`majority` / `supermajority` / `unanimous` / `threshold:<N>`). |
+| `--reviewers <list>` | review-plan, review | Override the reviewer roster: `claude:opus,gemini:default,...`. |
 | `--single` | review | Skip MAGI; use `maestro-reviewer` subagent only. |
 | `--diff <range>` | review | Diff range to review. Defaults to working tree vs HEAD. |
 | `--staged` | review | Review only staged changes. |
-| `--workdir <path>` | xreview-plan, review | Reuse a previous orchestrator workdir; skip fan-out, re-run consensus. |
+| `--workdir <path>` | review-plan, review | Reuse a previous orchestrator workdir; skip fan-out, re-run consensus. |
 | `--milestone N` / `--task T<m>.<n>` | work | Pick what to dispatch. |
 | `--parallel` | work | Dispatch `🔀` lanes in parallel. |
 | `--reset` / `--recheck` | setup | Wipe config / re-validate without resetting. |
@@ -77,7 +77,7 @@ maestro-workflow/
 │   ├── nvm-exec.sh                            # nvm-aware CLI path resolution (sourced lib)
 │   ├── preflight.sh                           # aggregated CLI healthcheck → JSON
 │   └── magi-consensus.sh                      # consolidates per-reviewer outputs into a MAGI report
-├── skills/maestro.xreview-plan/scripts/
+├── skills/maestro.review-plan/scripts/
 │   ├── orchestrator.sh                        # parallel fan-out + event stream + fallback policy
 │   └── adapters/{claude,gemini,codex}.sh      # CLI-specific run + healthcheck
 └── test/
@@ -102,7 +102,7 @@ Exit codes: `0` policy passed, `2` policy failed, `3` config error, `130` interr
 
 ### Adapter contract
 
-Every adapter at `skills/maestro.xreview-plan/scripts/adapters/<cli>.sh` supports two modes:
+Every adapter at `skills/maestro.review-plan/scripts/adapters/<cli>.sh` supports two modes:
 
 1. `--healthcheck <config>` → prints `key=value` lines (`status` / `reason` / `version` / `path`) and exits 0/1/2.
 2. `run <config> <prompt-file> <log-file> <final-file> [model]` → exit codes:

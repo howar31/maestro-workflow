@@ -25,9 +25,9 @@ Every command is `disable-model-invocation: true` — it only runs when the user
 | `/maestro.setup` | First-run onboarding: healthcheck CLIs, write `~/.config/maestro-workflow/config.json`, dry-run | yes (interactive) |
 | `/maestro.plan` | Coordinator drafts PLAN.md / SPEC.md in `docs/<num>-<slug>/` | yes (confirm doc) |
 | `/maestro.tasks` | Coordinator decomposes PLAN/SPEC into TASKS.md milestones + checklists | yes (confirm tasks) |
-| `/maestro.xreview-plan` | Multi-CLI MAGI review of PLAN/SPEC; outputs `MAGI_PLAN_REVIEW.md` | yes (verdict to user) |
+| `/maestro.review-plan` | Multi-CLI MAGI review of PLAN/SPEC; outputs `MAGI_PLAN_REVIEW.md` | yes (verdict to user) |
 | `/maestro.work` | Dispatches `maestro-developer` (Sonnet) per task; updates WORKS.md | yes (before commit) |
-| `/maestro.review` | Default multi-CLI MAGI on git diff; `--single` falls back to `maestro-reviewer` (Opus) | yes (verdict to user) |
+| `/maestro.review-code` | Default multi-CLI MAGI on git diff; `--single` falls back to `maestro-reviewer` (Opus) | yes (verdict to user) |
 
 ### Web-domain elaborations (run between `/maestro.plan` and `/maestro.tasks`)
 
@@ -81,7 +81,7 @@ Every command is `disable-model-invocation: true` — it only runs when the user
 
 ## Adapter contract (when adding a new CLI)
 
-Every `skills/maestro.xreview-plan/scripts/adapters/<cli>.sh` must support:
+Every `skills/maestro.review-plan/scripts/adapters/<cli>.sh` must support:
 
 1. `<adapter> --healthcheck <config>` — print `status=ok|skip|fail` plus optional `reason=` / `version=` / `path=` lines. Exit 0 (ok), 1 (skip), 2 (fail).
 2. `<adapter> run <config> <prompt-file> <log-file> <final-file> [model]` — invoke the CLI, write log + final, return:

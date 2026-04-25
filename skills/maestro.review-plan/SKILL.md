@@ -1,10 +1,10 @@
 ---
-name: maestro.xreview-plan
+name: maestro.review-plan
 description: Run a multi-CLI MAGI review of a sprint's PLAN.md / SPEC.md. Spawns reviewers in parallel via the orchestrator, then applies semantic dedup + weighted voting per references/MAGI_VOTING.md. Default reviewers and voting mode come from ~/.config/maestro-workflow/config.json. Override with --reviewers and --magi.
 disable-model-invocation: true
 ---
 
-# /maestro.xreview-plan — MAGI plan review
+# /maestro.review-plan — MAGI plan review
 
 You are the coordinator. Have N CLIs review the user's PLAN/SPEC in parallel,
 then consolidate their findings using MAGI weighted voting.
@@ -77,9 +77,9 @@ Do not produce any other output sections. Do not edit files.
 ## 4. Invoke the orchestrator
 
 ```bash
-WORKDIR=$(mktemp -d -t maestro-xreview.XXXXXX)
-MAESTRO_XREVIEW_WORKDIR="$WORKDIR" \
-  "$PLUGIN_ROOT/skills/maestro.xreview-plan/scripts/orchestrator.sh" \
+WORKDIR=$(mktemp -d -t maestro-review.XXXXXX)
+MAESTRO_REVIEW_WORKDIR="$WORKDIR" \
+  "$PLUGIN_ROOT/skills/maestro.review-plan/scripts/orchestrator.sh" \
   "$prompt_file" \
   $reviewer_args   # optional <cli:model> ... from --reviewers
 ```
@@ -155,7 +155,7 @@ If verdict = APPROVE: suggest `/maestro.tasks` (if not yet done) or
 `/maestro.work`.
 
 If verdict ≠ APPROVE: suggest the user revise PLAN.md and re-run
-`/maestro.xreview-plan`.
+`/maestro.review-plan`.
 
 Do not auto-trigger anything.
 
