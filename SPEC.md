@@ -552,3 +552,13 @@ user prefers.
   recurs frequently and proactively suggest `/magi.plan --into <sprint>`
   to formalize the choice into PLAN/SPEC. Threshold not yet set; deferred
   until real sprint usage shows density patterns.
+- **Merging `/magi.review-plan` into `/magi.tasks`** (or auto-continuing
+  hand-off chains in general). Considered and rejected: `/magi.review-plan`
+  is intentionally optional (humans can self-review the plan to save
+  tokens), and `/magi.tasks` does not consume review output as input —
+  unlike the `/magi.review-code` → `/magi.commit` path where DRIFT.md is
+  a required artifact. Merging the two would force the token cost on
+  every plan iteration, complicate the revise-and-re-review loop, and
+  break the single-responsibility principle for skills. Hand-off text
+  already tells the user what to run next; the marginal friction of
+  typing one more slash command is acceptable.
