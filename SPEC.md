@@ -19,12 +19,51 @@ A `/maestro.setup` wizard runs once at install time to inspect installed CLIs, w
 | Phase | Deliverable | Status |
 |-------|-------------|--------|
 | A | Orchestrator + three adapters + MAGI consensus + tests | ✅ done |
-| B | Setup wizard + 5 core skills + override flags | ⏳ not started |
-| C | Subagents (`maestro-developer` / `maestro-reviewer`) | ⏳ |
-| D | Web-domain skills (frontend / backend / infra / ci) | ⏳ |
-| E | Externalised config + zh-TW README + optional hooks | ⏳ |
+| B | Setup wizard + 6 core skills + override flags | ✅ done |
+| C | Subagents (`maestro-developer` / `maestro-reviewer`) | ✅ done (folded into Phase B) |
+| D | Web-domain skills (frontend / backend / infra / ci) | ⏳ not started |
+| E | Externalised config + zh-TW README + optional hooks | ⏳ partially: README zh-TW exists; team-ready hooks not yet |
 
-## Phase A architecture (current)
+## Slash commands (Phase B)
+
+Every command's SKILL.md has `disable-model-invocation: true` — it only runs
+when the user explicitly types the slash. Skills delegate to the
+orchestrator + magi-consensus shell scripts and to the two subagents below.
+
+| Command | Body summary |
+|---------|--------------|
+| `/maestro.setup [--reset \| --recheck]` | Healthcheck CLIs via `preflight.sh`, ask user for reviewer roster + weights + MAGI mode + nvm version + output language, write `~/.config/maestro-workflow/config.json`, validate with a tiny dry-run via the orchestrator. |
+| `/maestro.plan [slug] "<desc>"` | Resolve `docs/<num>-<slug>/`, read project context (PRD/TECHSTACK/CLAUDE/AGENTS), decide PLAN.md vs SPEC.md, draft, pause for user confirmation. |
+| `/maestro.tasks [<num>-<slug>] [--milestones N]` | Read PLAN/SPEC, write TASKS.md with milestones + atomic tasks, mark `🔀` lanes for parallelisable work, pause for confirmation. |
+| `/maestro.xreview-plan [--reviewers ...] [--magi <mode>]` | Build review prompt from PLAN/SPEC, invoke orchestrator, run magi-consensus, then **the coordinator** applies semantic dedup + weighted vote per `references/MAGI_VOTING.md`, writes `MAGI_PLAN_REVIEW.md`. |
+| `/maestro.work [--milestone N \| --task T<m>.<n>] [--parallel] [--model ...]` | Read TASKS.md, dispatch `maestro-developer` per task (or per `🔀` lane in parallel), aggregate DONE/BLOCKED, append to WORKS.md, pause before commit. |
+| `/maestro.review [--single] [--magi <mode>] [--diff <range>]` | Default: orchestrator + MAGI on `git diff`. `--single`: dispatch `maestro-reviewer` only. Writes `MAGI_CODE_REVIEW.md` or `SINGLE_CODE_REVIEW.md`. Never auto-commits. |
+
+## Subagents (Phase C — folded into B)
+
+| Agent | Model | Tools | Role |
+|-------|-------|-------|------|
+| `maestro-developer` | `sonnet` | Read, Write, Edit, Bash, Grep, Glob | TDD-first implementation worker. Receives a self-contained task brief from `/maestro.work`. Reports `DONE` or `BLOCKED`. Forbidden from architecture changes, scope expansion, commits, or package upgrades. |
+| `maestro-reviewer` | `opus` | Read, Grep, Glob, Bash (read-only) | Defensive code reviewer for `/maestro.review --single` and degraded-MAGI fallback. Outputs Verdict + 🔴 Critical / 🟡 Important / 🟢 Note. Never edits files. |
+
+## Override flags (Phase B)
+
+Every slash command supports its applicable subset:
+
+| Flag | Applies to | Effect |
+|------|-----------|--------|
+| `--model <name>` | plan, tasks, work, review | Override the active model for this invocation. |
+| `--magi <mode>` | xreview-plan, review | Override MAGI mode (`majority` / `supermajority` / `unanimous` / `threshold:<N>`). |
+| `--reviewers <list>` | xreview-plan, review | Override the reviewer roster: `claude:opus,gemini:default,...`. |
+| `--single` | review | Skip MAGI; use `maestro-reviewer` subagent only. |
+| `--diff <range>` | review | Diff range to review. Defaults to working tree vs HEAD. |
+| `--staged` | review | Review only staged changes. |
+| `--workdir <path>` | xreview-plan, review | Reuse a previous orchestrator workdir; skip fan-out, re-run consensus. |
+| `--milestone N` / `--task T<m>.<n>` | work | Pick what to dispatch. |
+| `--parallel` | work | Dispatch `🔀` lanes in parallel. |
+| `--reset` / `--recheck` | setup | Wipe config / re-validate without resetting. |
+
+## Phase A architecture
 
 ### Components
 
@@ -147,10 +186,11 @@ Resolution order: `$MAESTRO_CONFIG_PATH` → `~/.config/maestro-workflow/config.
 
 Run `bash -n <script>` to syntax-check any shell file.
 
-## Out of scope (Phase A)
+## Out of scope (still pending)
 
-- Slash commands (`/maestro.plan`, `/maestro.work`, etc.) — Phase B.
-- Subagents — Phase C.
-- Web-domain skills — Phase D.
-- Setup wizard — Phase B.
-- Semantic issue dedup / final consolidated MAGI verdict — done by the coordinator agent in Phase B.
+- **Phase D** — web-domain skills (`maestro.web.frontend.spec`,
+  `.backend.spec`, `.infra.plan`, `.ci.spec`).
+- **Phase E** — team-ready hooks (commit / lint), externalised reviewer
+  catalogue, optional Notion / Slack integrations.
+- Plugin marketplace registration — repo is currently consumed via
+  `claude plugin add github:howar31/maestro-workflow` once installed.

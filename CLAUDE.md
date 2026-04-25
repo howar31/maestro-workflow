@@ -6,7 +6,30 @@ Project-wide instructions for AI agents working in this repo.
 A Claude Code plugin that orchestrates multi-model code/plan reviews via parallel CLI fan-out plus MAGI weighted voting. Architecture and full feature spec live in [SPEC.md](SPEC.md).
 
 ## Status
-Phase A complete: orchestrator + three adapters (claude/gemini/codex) + MAGI consensus report builder. Skills (`/maestro.*` slash commands), subagents, and the setup wizard are not yet implemented — see Phase B onward in [SPEC.md](SPEC.md).
+Phases A + B complete:
+
+- **Phase A** — orchestrator + three adapters (claude/gemini/codex) + MAGI consensus report builder.
+- **Phase B** — six slash commands (`/maestro.setup`, `/maestro.plan`, `/maestro.tasks`, `/maestro.xreview-plan`, `/maestro.work`, `/maestro.review`) and two subagents (`maestro-developer`, `maestro-reviewer`).
+
+Phase D (web-domain skills) and Phase E (team-ready externalisation + hooks) are not yet implemented — see [SPEC.md](SPEC.md).
+
+## Slash commands
+
+Every command is `disable-model-invocation: true` — it only runs when the user explicitly types `/maestro.<name>`.
+
+| Command | Role | Pauses for user? |
+|---------|------|-------------------|
+| `/maestro.setup` | First-run onboarding: healthcheck CLIs, write `~/.config/maestro-workflow/config.json`, dry-run | yes (interactive) |
+| `/maestro.plan` | Coordinator drafts PLAN.md / SPEC.md in `docs/<num>-<slug>/` | yes (confirm doc) |
+| `/maestro.tasks` | Coordinator decomposes PLAN/SPEC into TASKS.md milestones + checklists | yes (confirm tasks) |
+| `/maestro.xreview-plan` | Multi-CLI MAGI review of PLAN/SPEC; outputs `MAGI_PLAN_REVIEW.md` | yes (verdict to user) |
+| `/maestro.work` | Dispatches `maestro-developer` (Sonnet) per task; updates WORKS.md | yes (before commit) |
+| `/maestro.review` | Default multi-CLI MAGI on git diff; `--single` falls back to `maestro-reviewer` (Opus) | yes (verdict to user) |
+
+## Subagents
+
+- **`maestro-developer`** (`model: sonnet`) — TDD-first implementation worker. Read/Write/Edit/Bash/Grep/Glob. Reports `DONE: <summary>` or `BLOCKED: <reason>`. Does not make architecture decisions and does not commit.
+- **`maestro-reviewer`** (`model: opus`) — Defensive code reviewer. Read/Grep/Glob/Bash (read-only). Outputs structured Critical / Important / Note. Never edits files.
 
 ## Run / test commands
 

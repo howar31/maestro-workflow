@@ -6,29 +6,59 @@
 
 ## 現在進度
 
-🚧 **Phase A 完成（orchestrator 基礎建設）**。Skills (`/maestro.*` slash command)、subagent、setup wizard 尚未實作 — 完整路線見 [`SPEC.md`](SPEC.md)。
+✅ **Phase A + B 完成**：orchestrator 底層 + 6 個 slash command + 2 個 subagent。完整路線見 [`SPEC.md`](SPEC.md)。
 
 目前已可用：
-- 多 CLI 並行 fan-out（claude / gemini / codex）
-- 事件流協定（START / RETURN / SKIP / FAIL / ALL_DONE）
-- Quota / auth 自動降級偵測
+- 多 CLI 並行 fan-out（claude / gemini / codex），事件流協定、quota / auth 自動降級
 - MAGI 加權投票 4 種模式（majority / supermajority / unanimous / threshold）
+- 6 個 slash command：`/maestro.setup`、`/maestro.plan`、`/maestro.tasks`、`/maestro.xreview-plan`、`/maestro.work`、`/maestro.review`
+- 2 個 subagent：`maestro-developer`（Sonnet, TDD 實作）、`maestro-reviewer`（Opus, 唯讀審查）
+- 預留 override flags：`--model` / `--magi` / `--reviewers` / `--single` / `--parallel` / `--diff` …
 - nvm 相容（避開 `#!/usr/bin/env node` 找錯版本的坑）
 
 尚未可用：
-- 透過 `claude plugin add` 安裝後當 plugin 用
-- `/maestro.plan` / `/maestro.work` / `/maestro.review` 等 slash command
-- 自動 onboarding wizard
+- 領域 add-on（Phase D）：`/maestro.web.frontend.spec`、`.backend.spec`、`.infra.plan`、`.ci.spec`
+- 團隊化 hooks 與外部 reviewer catalogue（Phase E）
 
-## 安裝（暫時用法）
+## 安裝
+
+### 作為 Claude Code plugin（推薦）
+
+```bash
+claude plugin add github:howar31/maestro-workflow
+```
+
+安裝後第一件事跑 setup wizard：
+
+```
+/maestro.setup
+```
+
+它會檢查你機器上的 `claude` / `gemini` / `codex`、詢問你想啟用哪幾位 reviewer 與權重、寫入 `~/.config/maestro-workflow/config.json`，最後跑一次 dry-run 驗證。
+
+### 作為本機開發 / 直接跑 shell scripts
 
 ```bash
 git clone https://github.com/howar31/maestro-workflow.git /opt/projects/maestro-workflow
 cd /opt/projects/maestro-workflow
-./scripts/shared/preflight.sh
+./scripts/shared/preflight.sh        # 健檢
+./test/e2e-smoke.sh                  # 真 CLI 端到端
+./test/e2e-fallback.sh               # mock adapter，免 token
 ```
 
-`preflight.sh` 會檢查 `claude` / `gemini` / `codex` 三家 CLI 是否可用，輸出 JSON 健檢報告。
+## 使用流程
+
+```
+/maestro.setup                        # 第一次先跑這個
+/maestro.plan "<功能描述>"            # 產出 docs/<num>-<slug>/PLAN.md
+/maestro.xreview-plan                 # 多 CLI MAGI 審 plan
+/maestro.tasks                        # 拆 TASKS.md
+/maestro.work                         # 派工 maestro-developer 實作
+/maestro.review                       # 多 CLI MAGI 審 code（--single 退化單審）
+                                      # 確認沒問題後手動 commit
+```
+
+每一步都會在使用者面前停下來，等你說「OK 繼續」。Plugin 不會偷偷 commit / push。
 
 ### 環境需求
 
