@@ -21,8 +21,8 @@ A `/maestro.setup` wizard runs once at install time to inspect installed CLIs, w
 | A | Orchestrator + three adapters + MAGI consensus + tests | ✅ done |
 | B | Setup wizard + 6 core skills + override flags | ✅ done |
 | C | Subagents (`maestro-developer` / `maestro-reviewer`) | ✅ done (folded into Phase B) |
-| D | Web-domain skills (frontend / backend / infra / ci) | ⏳ not started |
-| E | Externalised config + zh-TW README + optional hooks | ⏳ partially: README zh-TW exists; team-ready hooks not yet |
+| D | Web-domain skills (frontend / backend / infra / ci) + 4 reference docs | ✅ done |
+| E | Team-ready hooks + canonical AGENTS.md | ⏳ remaining |
 
 ## Slash commands (Phase B)
 
@@ -186,11 +186,28 @@ Resolution order: `$MAESTRO_CONFIG_PATH` → `~/.config/maestro-workflow/config.
 
 Run `bash -n <script>` to syntax-check any shell file.
 
+## Web-domain skills (Phase D)
+
+Four optional add-ons. Each reads its corresponding reference document
+under `references/domain/web/<x>.md` (canonical patterns, templates, and
+anti-patterns). Skills produce documentation only — they never run apply,
+deploy, or commit operations.
+
+| Skill | Output | Reference |
+|-------|--------|-----------|
+| `/maestro.web.frontend.spec` | Frontend section appended to SPEC.md (component tree, state, a11y checklist, routing/data, perf budget, Playwright test plan); optional `tests/e2e/<feature>.spec.ts` stub | `references/domain/web/frontend.md` |
+| `/maestro.web.backend.spec` | Backend section appended to SPEC.md (OpenAPI / SDL contract, data model + migration plan, authn/z matrix, validation rules, observability, contract test plan); optional contract test stub | `references/domain/web/backend.md` |
+| `/maestro.web.infra.plan` | `<sprint>/INFRA.md` with Terraform `plan.tfplan` (dry-run only), IAM diff matrix, cost estimate via Infracost, rollback plan with STOP-checklist for irreversible changes | `references/domain/web/infra.md` |
+| `/maestro.web.ci.spec` | `<sprint>/CI.md` with stage breakdown, secrets/permissions audit, deployment strategy, smoke tests; draft workflow file inside the sprint dir (never written to live `.github/workflows/`) | `references/domain/web/ci-cd.md` |
+
+Each skill is invoked between `/maestro.plan` (which produces the
+high-level SPEC) and `/maestro.tasks` (which decomposes into work
+units). They are independent — only invoke the ones a feature actually
+touches.
+
 ## Out of scope (still pending)
 
-- **Phase D** — web-domain skills (`maestro.web.frontend.spec`,
-  `.backend.spec`, `.infra.plan`, `.ci.spec`).
-- **Phase E** — team-ready hooks (commit / lint), externalised reviewer
-  catalogue, optional Notion / Slack integrations.
+- **Phase E** — team-ready hooks (commit-msg Conventional Commits, pre-commit
+  lint), canonical `references/AGENTS.md` for cross-project conventions.
 - Plugin marketplace registration — repo is currently consumed via
-  `claude plugin add github:howar31/maestro-workflow` once installed.
+  `claude plugin add github:howar31/maestro-workflow`.

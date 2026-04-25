@@ -6,16 +6,20 @@ Project-wide instructions for AI agents working in this repo.
 A Claude Code plugin that orchestrates multi-model code/plan reviews via parallel CLI fan-out plus MAGI weighted voting. Architecture and full feature spec live in [SPEC.md](SPEC.md).
 
 ## Status
-Phases A + B complete:
+Phases A + B + C + D complete:
 
 - **Phase A** — orchestrator + three adapters (claude/gemini/codex) + MAGI consensus report builder.
-- **Phase B** — six slash commands (`/maestro.setup`, `/maestro.plan`, `/maestro.tasks`, `/maestro.xreview-plan`, `/maestro.work`, `/maestro.review`) and two subagents (`maestro-developer`, `maestro-reviewer`).
+- **Phase B** — six core slash commands and override flags.
+- **Phase C** — two subagents (`maestro-developer` Sonnet, `maestro-reviewer` Opus).
+- **Phase D** — four web-domain skills + reference docs.
 
-Phase D (web-domain skills) and Phase E (team-ready externalisation + hooks) are not yet implemented — see [SPEC.md](SPEC.md).
+Phase E (team-ready externalisation + hooks) is the only remaining piece — see [SPEC.md](SPEC.md).
 
 ## Slash commands
 
 Every command is `disable-model-invocation: true` — it only runs when the user explicitly types `/maestro.<name>`.
+
+### Core flow
 
 | Command | Role | Pauses for user? |
 |---------|------|-------------------|
@@ -25,6 +29,15 @@ Every command is `disable-model-invocation: true` — it only runs when the user
 | `/maestro.xreview-plan` | Multi-CLI MAGI review of PLAN/SPEC; outputs `MAGI_PLAN_REVIEW.md` | yes (verdict to user) |
 | `/maestro.work` | Dispatches `maestro-developer` (Sonnet) per task; updates WORKS.md | yes (before commit) |
 | `/maestro.review` | Default multi-CLI MAGI on git diff; `--single` falls back to `maestro-reviewer` (Opus) | yes (verdict to user) |
+
+### Web-domain elaborations (run between `/maestro.plan` and `/maestro.tasks`)
+
+| Command | Role | Output |
+|---------|------|--------|
+| `/maestro.web.frontend.spec` | Append Frontend section (component tree, a11y, Playwright e2e) to SPEC.md | `SPEC.md` updated; optional Playwright stub |
+| `/maestro.web.backend.spec` | Append Backend section (OpenAPI/SDL contract, data model, authn/z, contract test) | `SPEC.md` updated; optional contract test stub |
+| `/maestro.web.infra.plan` | Generate `INFRA.md` with Terraform/gcloud dry-run, IAM diff, cost estimate, rollback | `<sprint>/INFRA.md`, `plan.tfplan`, `plan.json` |
+| `/maestro.web.ci.spec` | Generate `CI.md` + draft workflow file (GHA / Cloud Build / etc.) | `<sprint>/CI.md` + draft workflow inside sprint dir |
 
 ## Subagents
 

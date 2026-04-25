@@ -6,19 +6,28 @@
 
 ## 現在進度
 
-✅ **Phase A + B 完成**：orchestrator 底層 + 6 個 slash command + 2 個 subagent。完整路線見 [`SPEC.md`](SPEC.md)。
+✅ **Phase A + B + C + D 完成**：orchestrator 底層 + 6 個核心 slash command + 4 個 web 領域 skill + 2 個 subagent。完整路線見 [`SPEC.md`](SPEC.md)。
 
 目前已可用：
+
+**核心**
 - 多 CLI 並行 fan-out（claude / gemini / codex），事件流協定、quota / auth 自動降級
 - MAGI 加權投票 4 種模式（majority / supermajority / unanimous / threshold）
-- 6 個 slash command：`/maestro.setup`、`/maestro.plan`、`/maestro.tasks`、`/maestro.xreview-plan`、`/maestro.work`、`/maestro.review`
+- 6 個核心 slash command：`/maestro.setup`、`/maestro.plan`、`/maestro.tasks`、`/maestro.xreview-plan`、`/maestro.work`、`/maestro.review`
 - 2 個 subagent：`maestro-developer`（Sonnet, TDD 實作）、`maestro-reviewer`（Opus, 唯讀審查）
-- 預留 override flags：`--model` / `--magi` / `--reviewers` / `--single` / `--parallel` / `--diff` …
 - nvm 相容（避開 `#!/usr/bin/env node` 找錯版本的坑）
 
+**Web 領域 add-ons（Phase D）**
+- `/maestro.web.frontend.spec` — 元件樹、a11y checklist、Playwright e2e 計畫
+- `/maestro.web.backend.spec` — OpenAPI / SDL 契約、migration、authz 矩陣、contract test
+- `/maestro.web.infra.plan` — Terraform plan dry-run、IAM diff、Infracost、rollback
+- `/maestro.web.ci.spec` — pipeline 階段、secrets handling、deployment 策略、smoke
+
+**Override flags**
+- `--model` / `--magi` / `--reviewers` / `--single` / `--parallel` / `--diff` / `--workdir` / `--milestone` / `--task` / `--reset` / `--recheck`
+
 尚未可用：
-- 領域 add-on（Phase D）：`/maestro.web.frontend.spec`、`.backend.spec`、`.infra.plan`、`.ci.spec`
-- 團隊化 hooks 與外部 reviewer catalogue（Phase E）
+- 團隊化 hooks 與 canonical AGENTS.md（Phase E）
 
 ## 安裝
 
@@ -48,6 +57,8 @@ cd /opt/projects/maestro-workflow
 
 ## 使用流程
 
+### 通用流程
+
 ```
 /maestro.setup                        # 第一次先跑這個
 /maestro.plan "<功能描述>"            # 產出 docs/<num>-<slug>/PLAN.md
@@ -58,7 +69,21 @@ cd /opt/projects/maestro-workflow
                                       # 確認沒問題後手動 commit
 ```
 
-每一步都會在使用者面前停下來，等你說「OK 繼續」。Plugin 不會偷偷 commit / push。
+### Web 領域進階流程（在 `/maestro.plan` 與 `/maestro.tasks` 之間插入）
+
+```
+/maestro.plan "<功能描述>"
+/maestro.web.frontend.spec            # 補 frontend spec 段落（component / a11y / e2e）
+/maestro.web.backend.spec             # 補 backend spec 段落（API contract / migration）
+/maestro.web.infra.plan               # 產出 INFRA.md (terraform plan dry-run / IAM diff)
+/maestro.web.ci.spec                  # 產出 CI.md + draft workflow YAML
+/maestro.xreview-plan                 # 補完後再 review
+/maestro.tasks
+/maestro.work
+/maestro.review
+```
+
+每一步都會在使用者面前停下來，等你說「OK 繼續」。Plugin 不會偷偷 commit / push、不會 apply infra、不會 trigger deploy。
 
 ### 環境需求
 
