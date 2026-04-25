@@ -20,8 +20,18 @@
 
 ### 作為 Claude Code plugin（推薦）
 
+本 repo 自帶 `.claude-plugin/marketplace.json`，是個 single-plugin self-hosted marketplace。兩步：
+
 ```bash
-claude plugin add github:howar31/magi-workflow
+claude plugin marketplace add howar31/magi-workflow      # 註冊 marketplace
+claude plugin install magi-workflow@magi-workflow        # 安裝 plugin
+```
+
+或在 Claude Code session 裡用 slash command：
+
+```
+/plugin marketplace add howar31/magi-workflow
+/plugin install magi-workflow@magi-workflow
 ```
 
 安裝後第一件事跑 setup wizard：
@@ -319,15 +329,23 @@ chmod +x .git/hooks/{commit-msg,pre-commit,pre-push}
 ## 升級與移除
 
 ```bash
-# 升級到最新版
+# 拉最新 marketplace 內容
+claude plugin marketplace update magi-workflow
+
+# 升級 plugin 到最新版
 claude plugin update magi-workflow
 
 # 升級後若 schema 有變動，重跑 setup 重新驗證
 /magi.setup --recheck
 
-# 完全移除
-claude plugin remove magi-workflow
+# 移除 plugin（保留 marketplace 註冊）
+claude plugin uninstall magi-workflow
+
+# 連 marketplace 一起移除
+claude plugin marketplace remove magi-workflow
 ```
+
+> 預設不會自動更新；要 marketplace 啟動時自動拉新版，在 Claude Code 內跑 `/plugin marketplace`，找到 magi-workflow 把 auto-update 開起來，更新後它會提示 `/reload-plugins`。
 
 config 在 `~/.config/magi-workflow/config.json`，移除 plugin 不會自動刪 config — 想完全清乾淨手動 `rm -rf ~/.config/magi-workflow/`。
 

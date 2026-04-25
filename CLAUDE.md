@@ -23,7 +23,7 @@ Every command is `disable-model-invocation: true` — it only runs when the user
 | Command | Role | Pauses for user? |
 |---------|------|-------------------|
 | `/magi.setup` | First-run onboarding: healthcheck CLIs, write `~/.config/magi-workflow/config.json`, dry-run | yes (interactive) |
-| `/magi.plan` | Coordinator drafts PLAN.md / SPEC.md in `docs/<num>-<slug>/` | yes (confirm doc) |
+| `/magi.plan` | Coordinator drafts PLAN.md / SPEC.md in `docs/<num>-<slug>/`; after confirmation, scans the doc + TECHSTACK.md for web-domain keywords and offers `/magi.web.<x>.spec` add-ons | yes (confirm doc) |
 | `/magi.tasks` | Coordinator decomposes PLAN/SPEC into TASKS.md milestones + checklists | yes (confirm tasks) |
 | `/magi.review-plan` | Multi-CLI MAGI review of PLAN/SPEC; outputs `MAGI_PLAN_REVIEW.md` | yes (verdict to user) |
 | `/magi.work` | Dispatches `magi-developer` (Sonnet) per task; updates WORKS.md | yes (before commit) |

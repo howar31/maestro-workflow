@@ -229,10 +229,25 @@ single-shot bypass, and ship with `hooks/install.sh` for one-line
 installation into `.git/hooks/` (or copy to `.githooks/` and use
 `core.hooksPath` for repo-tracked hooks).
 
+## Plugin distribution
+
+The repo ships its own `.claude-plugin/marketplace.json` and works as a
+**self-hosted single-plugin marketplace**. Users install via the standard
+Claude Code plugin commands:
+
+```bash
+claude plugin marketplace add howar31/magi-workflow
+claude plugin install magi-workflow@magi-workflow
+```
+
+Or via slash commands inside a session: `/plugin marketplace add ...` +
+`/plugin install ...`. Auto-update is opt-in per marketplace via the
+`/plugin marketplace` UI.
+
 ## Still out of scope
 
-- Plugin marketplace registration — repo is currently consumed via
-  `claude plugin add github:howar31/magi-workflow`.
+- Submission to Anthropic's official `claude-plugins-official` marketplace
+  for one-line install (`claude plugin install magi-workflow@claude-plugins-official`).
 - Non-web domain skills (data engineering, ML, mobile, game). Architecture
   is ready: add `skills/magi.<domain>.<name>/` and
   `references/domain/<domain>/`.

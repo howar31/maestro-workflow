@@ -1,0 +1,17 @@
+{
+  "name": "magi-workflow",
+  "owner": {
+    "name": "Howar31",
+    "url": "https://github.com/howar31"
+  },
+  "metadata": {
+    "description": "Self-hosted single-plugin marketplace for magi-workflow"
+  },
+  "plugins": [
+    {
+      "name": "magi-workflow",
+      "source": "./",
+      "description": "Multi-model engineering workflow with MAGI weighted voting and cross-CLI orchestration"
+    }
+  ]
+}

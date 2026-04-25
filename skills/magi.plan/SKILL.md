@@ -126,9 +126,32 @@ If the user wants edits, iterate until they confirm.
 
 When the user confirms the document:
 
-1. Tell them the next recommended step:
-   - `/magi.review-plan` — multi-model review of this PLAN/SPEC.
-2. Do not run it automatically.
+1. **Detect web-domain scope** — scan the drafted PLAN/SPEC + `docs/TECHSTACK.md` (if it exists) for keywords (case-insensitive, match whole words / phrases, not substrings):
+
+   | Domain | Trigger keywords | Suggested skill |
+   |--------|-----------------|----------------|
+   | Frontend | `react`, `vue`, `svelte`, `angular`, `next.js`, `nuxt`, `astro`, `component`, `UI`, `UX`, `a11y`, `accessibility`, `playwright`, `cypress`, `前端` | `/magi.web.frontend.spec` |
+   | Backend | `api`, `rest`, `graphql`, `openapi`, `endpoint`, `database`, `migration`, `schema`, `authn`, `authz`, `jwt`, `oauth`, `後端` | `/magi.web.backend.spec` |
+   | Infra | `terraform`, `aws`, `gcp`, `azure`, `kubernetes`, `k8s`, `docker`, `iam`, `infrastructure`, `基礎設施` | `/magi.web.infra.plan` |
+   | CI | `ci/cd`, `github actions`, `gha`, `cloud build`, `gitlab ci`, `pipeline`, `workflow`, `deployment`, `部署` | `/magi.web.ci.spec` |
+
+   If **any** domain matches, prompt the user once, listing only the matched domains:
+
+   > 偵測到這個 feature 可能涉及 **[matched domains]**。要不要先補強 SPEC 再進入 review？
+   >   - `/magi.web.frontend.spec` — component / a11y / e2e
+   >   - `/magi.web.backend.spec` — API contract / migration / authz
+   >   - `/magi.web.infra.plan` — terraform plan / IAM diff / cost
+   >   - `/magi.web.ci.spec` — pipeline / secrets / deployment
+   >
+   > 或直接跳過進入 `/magi.review-plan`。
+
+   Skip this entire step if **no** keywords match — do not bother the user with empty prompts.
+
+2. Tell them the next recommended step based on their choice:
+   - Picked one or more add-ons → suggest invoking those skills before `/magi.review-plan`.
+   - Declined or no detection → `/magi.review-plan` directly for multi-model review.
+
+3. Do not run anything automatically — every next skill needs the user's explicit slash command.
 
 ## Conventions
 
