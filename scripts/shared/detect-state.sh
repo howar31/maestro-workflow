@@ -11,7 +11,7 @@
 #   - which magi-workflow skills are allowed/disallowed in this state
 #   - staleness warnings (review artifacts older than their inputs)
 #
-# Each magi.* SKILL.md preflight calls this script and inspects
+# Each skills/<name>/SKILL.md preflight calls this script and inspects
 # .disallowed_skills["<self>"] before proceeding.
 #
 # Usage:
@@ -151,8 +151,8 @@ if [[ -n "$SPRINT_DIR" && "$SPRINT_HAS_ANY_PLAN" == true ]]; then
   fi
 fi
 
-# Hotfix mode: PLANNING but with HOTFIX.md skips TASKS state — /magi.go
-# can dispatch directly. Reflect this by allowing /magi.go in HOTFIX-PLANNING.
+# Hotfix mode: PLANNING but with HOTFIX.md skips TASKS state — /magi:go
+# can dispatch directly. Reflect this by allowing /magi:go in HOTFIX-PLANNING.
 HOTFIX_MODE=false
 [[ "$SPRINT_HOTFIX" == true ]] && HOTFIX_MODE=true
 
@@ -175,7 +175,7 @@ if [[ "$SPRINT_PLAN_REVIEW" == true ]]; then
       || stat -c %Y "$src_path" 2>/dev/null || echo 0)
     if [[ "$SRC_MTIME" -gt "$REVIEW_MTIME" ]]; then
       add_warning "stale_plan_review" "$SPRINT_DIR/MAGI_PLAN_REVIEW.md" \
-        "$src modified after last review" "/magi.review-plan"
+        "$src modified after last review" "/magi:review-plan"
       break
     fi
   done
@@ -199,7 +199,7 @@ if [[ "$SPRINT_DRIFT" == true ]]; then
     done < <(git diff --name-only HEAD 2>/dev/null; git diff --staged --name-only 2>/dev/null)
     if [[ "$NEWER_FOUND" == true ]]; then
       add_warning "stale_drift" "$SPRINT_DIR/DRIFT.md" \
-        "code modified after last review" "/magi.review-code"
+        "code modified after last review" "/magi:review-code"
     fi
   fi
 fi
@@ -207,17 +207,17 @@ fi
 # tasks_without_plan: TASKS.md exists but no plan equivalent
 if [[ "$SPRINT_TASKS" == true && "$SPRINT_HAS_ANY_PLAN" == false ]]; then
   add_warning "tasks_without_plan" "$SPRINT_DIR/TASKS.md" \
-    "TASKS.md exists but no PLAN/SPEC/TICKET/HOTFIX found" "/magi.plan --into $SPRINT_DIR"
+    "TASKS.md exists but no PLAN/SPEC/TICKET/HOTFIX found" "/magi:plan --into $SPRINT_DIR"
 fi
 
 # works_without_tasks: WORKS.md exists but no TASKS.md
 if [[ "$SPRINT_WORKS" == true && "$SPRINT_TASKS" == false ]]; then
   add_warning "works_without_tasks" "$SPRINT_DIR/WORKS.md" \
-    "WORKS.md exists but no TASKS.md found" "/magi.tasks"
+    "WORKS.md exists but no TASKS.md found" "/magi:tasks"
 fi
 
 # ── Compute allowed/disallowed skills for this state ──────────────────────
-ALL_SKILLS=(magi.help magi.status magi.setup magi.init magi.plan magi.tasks magi.review-plan magi.go magi.review-code magi.commit magi.yolo magi.web.frontend.spec magi.web.backend.spec magi.web.infra.plan magi.web.ci.spec)
+ALL_SKILLS=(help status setup init plan tasks review-plan go review-code commit yolo web-frontend-spec web-backend-spec web-infra-plan web-ci-spec)
 
 ALLOWED_JSON="[]"
 DISALLOWED_JSON="{}"
@@ -231,102 +231,102 @@ disallow() {
     '. + {($s): {reason: $r, suggest: $sug}}' <<<"$DISALLOWED_JSON")
 }
 
-# magi.help: always allowed (read-only quick reference, must work in BOOTSTRAP too)
-allow "magi.help"
+# help: always allowed (read-only quick reference, must work in BOOTSTRAP too)
+allow "help"
 
-# magi.status: always allowed (read-only terse state printer, must work in BOOTSTRAP too)
-allow "magi.status"
+# status: always allowed (read-only terse state printer, must work in BOOTSTRAP too)
+allow "status"
 
-# magi.setup: always allowed (per-user config wizard)
-allow "magi.setup"
+# setup: always allowed (per-user config wizard)
+allow "setup"
 
-# magi.init: always allowed (idempotent)
-allow "magi.init"
+# init: always allowed (idempotent)
+allow "init"
 
-# magi.plan: allowed in any state; warns (not refuses) in BOOTSTRAP
-allow "magi.plan"
+# plan: allowed in any state; warns (not refuses) in BOOTSTRAP
+allow "plan"
 
-# magi.tasks: needs PLANNING+ (sprint folder with plan equivalent)
+# tasks: needs PLANNING+ (sprint folder with plan equivalent)
 case "$STATE" in
   PLANNING|PLAN_REVIEWED|TASKS_READY|IN_PROGRESS|WORK_DONE|CODE_REVIEWED)
-    allow "magi.tasks"
+    allow "tasks"
     ;;
   *)
-    disallow "magi.tasks" \
+    disallow "tasks" \
       "no PLAN/SPEC/TICKET/HOTFIX found in current sprint (state=$STATE)" \
-      "/magi.plan"
+      "/magi:plan"
     ;;
 esac
 
-# magi.review-plan: needs PLANNING+
+# review-plan: needs PLANNING+
 case "$STATE" in
   PLANNING|PLAN_REVIEWED|TASKS_READY|IN_PROGRESS|WORK_DONE|CODE_REVIEWED)
-    allow "magi.review-plan"
+    allow "review-plan"
     ;;
   *)
-    disallow "magi.review-plan" \
+    disallow "review-plan" \
       "no PLAN/SPEC found in current sprint (state=$STATE)" \
-      "/magi.plan"
+      "/magi:plan"
     ;;
 esac
 
-# magi.go: needs TASKS_READY+ for normal flow; or HOTFIX mode in PLANNING
+# go: needs TASKS_READY+ for normal flow; or HOTFIX mode in PLANNING
 case "$STATE" in
   TASKS_READY|IN_PROGRESS|CODE_REVIEWED)
-    allow "magi.go"
+    allow "go"
     ;;
   WORK_DONE)
-    # All tasks done — re-running magi.go would be a no-op; allow with warning
-    allow "magi.go"
+    # All tasks done — re-running go would be a no-op; allow with warning
+    allow "go"
     ;;
   PLANNING|PLAN_REVIEWED)
     if [[ "$HOTFIX_MODE" == true ]]; then
-      allow "magi.go"
+      allow "go"
     else
-      disallow "magi.go" \
+      disallow "go" \
         "no TASKS.md and not a hotfix sprint (state=$STATE)" \
-        "/magi.tasks"
+        "/magi:tasks"
     fi
     ;;
   *)
-    disallow "magi.go" \
+    disallow "go" \
       "no sprint context (state=$STATE)" \
-      "/magi.plan"
+      "/magi:plan"
     ;;
 esac
 
-# magi.review-code: needs has_diff (any state)
+# review-code: needs has_diff (any state)
 if [[ "$HAS_DIFF" == true ]]; then
-  allow "magi.review-code"
+  allow "review-code"
 else
-  disallow "magi.review-code" \
+  disallow "review-code" \
     "no diff to review (working tree clean)" \
     "make some changes or stage them first"
 fi
 
-# magi.commit: sprint mode needs CODE_REVIEWED; standalone needs has_diff
+# commit: sprint mode needs CODE_REVIEWED; standalone needs has_diff
 if [[ "$STATE" == "CODE_REVIEWED" ]]; then
-  allow "magi.commit"
+  allow "commit"
 elif [[ "$HAS_DIFF" == true ]]; then
   # Allow standalone-mode commit if diff exists
-  allow "magi.commit"
+  allow "commit"
 else
-  disallow "magi.commit" \
+  disallow "commit" \
     "no diff to commit and no CODE_REVIEWED sprint" \
-    "make changes or run /magi.review-code first"
+    "make changes or run /magi:review-code first"
 fi
 
-# magi.yolo: headless full-pipeline runner; allowed in any state except BOOTSTRAP
+# yolo: headless full-pipeline runner; allowed in any state except BOOTSTRAP
 if [[ "$STATE" == "BOOTSTRAP" ]]; then
-  disallow "magi.yolo" \
+  disallow "yolo" \
     "project not initialized (state=BOOTSTRAP) — yolo needs at least root docs to anchor a sprint" \
-    "/magi.init"
+    "/magi:init"
 else
-  allow "magi.yolo"
+  allow "yolo"
 fi
 
-# magi.web.* — same gating as magi.tasks (need PLANNING+)
-for web_skill in magi.web.frontend.spec magi.web.backend.spec magi.web.infra.plan magi.web.ci.spec; do
+# web-* — same gating as tasks (need PLANNING+)
+for web_skill in web-frontend-spec web-backend-spec web-infra-plan web-ci-spec; do
   case "$STATE" in
     PLANNING|PLAN_REVIEWED|TASKS_READY|IN_PROGRESS|WORK_DONE|CODE_REVIEWED)
       allow "$web_skill"
@@ -334,7 +334,7 @@ for web_skill in magi.web.frontend.spec magi.web.backend.spec magi.web.infra.pla
     *)
       disallow "$web_skill" \
         "no PLAN/SPEC found in current sprint (state=$STATE)" \
-        "/magi.plan"
+        "/magi:plan"
       ;;
   esac
 done

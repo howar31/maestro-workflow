@@ -1,6 +1,6 @@
 # CI/CD reference
 
-Patterns and templates for `/magi.web.ci.spec`. Read once before
+Patterns and templates for `/magi:web-ci-spec`. Read once before
 elaborating a feature's pipeline / deployment story.
 
 ## Discovery
@@ -241,7 +241,7 @@ serviceAccount: projects/${PROJECT_ID}/serviceAccounts/cloud-build-runner@${PROJ
 
 ## Deliverable
 
-`/magi.web.ci.spec` produces a sprint file `magi/<num>-<slug>/CI.md`:
+`/magi:web-ci-spec` produces a sprint file `magi/<num>-<slug>/CI.md`:
 
 ```markdown
 # CI/CD plan — <feature name>

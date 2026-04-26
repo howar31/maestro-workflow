@@ -1,6 +1,6 @@
 # Infrastructure reference
 
-Patterns and templates for `/magi.web.infra.plan`. Read once before
+Patterns and templates for `/magi:web-infra-plan`. Read once before
 elaborating a feature's infra section. Bias: **gcloud + Terraform** because
 the user runs primarily on GCP, but principles transfer to AWS / Azure.
 
@@ -162,7 +162,7 @@ Document which of these run in CI vs locally vs out-of-band.
 
 ## Deliverable
 
-`/magi.web.infra.plan` produces a sprint file:
+`/magi:web-infra-plan` produces a sprint file:
 `magi/<num>-<slug>/INFRA.md`:
 
 ```markdown

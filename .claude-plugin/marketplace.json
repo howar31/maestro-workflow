@@ -9,7 +9,7 @@
   },
   "plugins": [
     {
-      "name": "magi-workflow",
+      "name": "magi",
       "source": "./",
       "description": "Multi-model engineering workflow with MAGI weighted voting and cross-CLI orchestration"
     }

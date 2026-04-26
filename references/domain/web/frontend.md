@@ -1,6 +1,6 @@
 # Frontend reference
 
-Patterns and templates for `/magi.web.frontend.spec`. Read once before
+Patterns and templates for `/magi:web-frontend-spec`. Read once before
 elaborating a feature's frontend section.
 
 ## Stack discovery
@@ -140,7 +140,7 @@ Recipe to run: `pnpm playwright test tests/e2e/<feature>.spec.ts`.
 
 ## Deliverable
 
-`/magi.web.frontend.spec` should append to (or create) the sprint's
+`/magi:web-frontend-spec` should append to (or create) the sprint's
 SPEC.md a **Frontend** section structured as:
 
 ```markdown
@@ -175,4 +175,4 @@ SPEC.md a **Frontend** section structured as:
 
 Plus, when applicable, scaffold `tests/e2e/<feature>.spec.ts` with the
 template above (only the structure — actual selectors and assertions are
-the developer's job during `/magi.go`).
+the developer's job during `/magi:go`).

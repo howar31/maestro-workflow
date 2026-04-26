@@ -17,7 +17,7 @@
 #   magi-consensus.sh <workdir> [--mode majority|supermajority|unanimous|threshold:N]
 #
 # The --mode flag lets a slash command override config.xreview.magi.mode
-# (e.g. /magi.review-code --magi unanimous).
+# (e.g. /magi:review-code --magi unanimous).
 
 set -uo pipefail
 

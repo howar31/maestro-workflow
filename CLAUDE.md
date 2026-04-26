@@ -2,10 +2,10 @@
 Multi-CLI MAGI orchestration plugin for code/plan review. → `SPEC.md`
 
 ## Slash commands
-Per-command contract in `skills/magi.<name>/SKILL.md`. → `SPEC.md §Slash commands`
+Per-command contract in `skills/<name>/SKILL.md`. → `SPEC.md §Slash commands`
 
 ## Subagents
-→ `agents/magi-developer.md`, `agents/magi-reviewer.md`
+→ `agents/developer.md`, `agents/reviewer.md`
 
 ## Project state model
 8 filesystem-derived states; SSOT is `scripts/shared/detect-state.sh`. → `SPEC.md §Project state model`
@@ -14,7 +14,7 @@ Per-command contract in `skills/magi.<name>/SKILL.md`. → `SPEC.md §Slash comm
 → `SPEC.md §Project document tiers`
 
 ## Commits
-- `/magi.commit` is the single in-project commit path (sprint + standalone). Independent of `~/.claude/skills/commit/`.
+- `/magi:commit` is the single in-project commit path (sprint + standalone). Independent of `~/.claude/skills/commit/`.
 - Before any commit, check whether `.claude-plugin/plugin.json` needs a bump per `SPEC.md §Plugin versioning`. Bump goes in the same commit.
 
 ## Run / test

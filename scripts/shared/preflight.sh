@@ -22,7 +22,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-ADAPTERS_DIR="$PLUGIN_ROOT/skills/magi.review-plan/scripts/adapters"
+ADAPTERS_DIR="$PLUGIN_ROOT/skills/review-plan/scripts/adapters"
 
 # shellcheck source=error-patterns.sh
 . "$SCRIPT_DIR/error-patterns.sh"

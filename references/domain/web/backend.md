@@ -1,6 +1,6 @@
 # Backend reference
 
-Patterns and templates for `/magi.web.backend.spec`. Read once before
+Patterns and templates for `/magi:web-backend-spec`. Read once before
 elaborating a feature's backend section.
 
 ## Stack discovery
@@ -195,7 +195,7 @@ describe('GET /v1/users/:id', () => {
 
 ## Deliverable
 
-`/magi.web.backend.spec` appends to SPEC.md a **Backend** section:
+`/magi:web-backend-spec` appends to SPEC.md a **Backend** section:
 
 ```markdown
 ## Backend

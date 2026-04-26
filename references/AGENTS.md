@@ -21,10 +21,10 @@ The plugin uses three model classes; the right one for the right job:
 
 ### When to override
 
-- Bump `magi-developer` to **Opus** via `/magi.go --model opus`
+- Bump `magi-developer` to **Opus** via `/magi:go --model opus`
   when the task involves multi-module refactors, intricate algorithm work,
   or the developer reported BLOCKED citing complexity on first dispatch.
-- Drop the multi-CLI MAGI to single-Opus via `/magi.review-code --single`
+- Drop the multi-CLI MAGI to single-Opus via `/magi:review-code --single`
   when iterating quickly on tiny diffs and saving tokens matters.
 
 Never hard-code a specific model version (e.g. `claude-opus-4-7`). Use the
@@ -220,10 +220,10 @@ journal exists so future you can answer "why did we do it this way?").
 The plugin pauses for user confirmation at every gate. **Never skip a
 gate.** The user is the final authority on:
 
-- PLAN approval (after `/magi.plan`)
-- TASKS approval (after `/magi.tasks`)
-- MAGI verdict acceptance (after `/magi.review-plan` or `/magi.review-code`)
-- Implementation acceptance (after each `/magi.go` batch)
+- PLAN approval (after `/magi:plan`)
+- TASKS approval (after `/magi:tasks`)
+- MAGI verdict acceptance (after `/magi:review-plan` or `/magi:review-code`)
+- Implementation acceptance (after each `/magi:go` batch)
 - Commit decision
 
 If a slash command is interrupted mid-flow, leave the artefacts in place
@@ -260,13 +260,13 @@ To set expectations and avoid scope creep:
 
 | Symptom | What to do |
 |---------|------------|
-| `~/.config/magi-workflow/config.json` missing | Tell user to run `/magi.setup`. |
+| `~/.config/magi-workflow/config.json` missing | Tell user to run `/magi:setup`. |
 | A required reviewer (claude) failed | Abort the review; surface the cause (auth? quota? missing CLI?). |
 | Optional reviewers all failed | Continue in degraded mode; warn loudly. |
 | Subagent reported BLOCKED | Surface to user; do not silently retry. |
 | Tests fail after `magi-developer` reported DONE | Treat as regression; do not silently fix; ask user. |
-| Workflow file already exists at the live path during `/magi.web.ci.spec` | Write the draft to the sprint dir only; never overwrite live workflows. |
-| User asks for a commit before `/magi.review-code` finished | Tell them review is incomplete; ask whether to skip review (defaults to no). |
+| Workflow file already exists at the live path during `/magi:web-ci-spec` | Write the draft to the sprint dir only; never overwrite live workflows. |
+| User asks for a commit before `/magi:review-code` finished | Tell them review is incomplete; ask whether to skip review (defaults to no). |
 
 ## 11. Versioning and updates to these guidelines
 

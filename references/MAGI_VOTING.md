@@ -2,7 +2,7 @@
 
 Canonical rules for the coordinator agent when consolidating multi-reviewer
 output into a final verdict. Read this once at the start of any
-`/magi.review-plan` or `/magi.review-code` invocation.
+`/magi:review-plan` or `/magi:review-code` invocation.
 
 ## Inputs
 

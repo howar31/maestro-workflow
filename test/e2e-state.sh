@@ -60,11 +60,11 @@ echo "=== Case 1: BOOTSTRAP (no root docs, no magi/) ==="
 T=$(make_repo)
 JSON=$(run_in "$T")
 assert_eq "state" "BOOTSTRAP" "$(jq -r .state <<<"$JSON")"
-assert_eq "magi.tasks disallowed" "true" "$(jq -r '.disallowed_skills["magi.tasks"] != null' <<<"$JSON")"
-assert_eq "magi.go disallowed" "true" "$(jq -r '.disallowed_skills["magi.go"] != null' <<<"$JSON")"
-assert_eq "magi.yolo disallowed in BOOTSTRAP" "true" "$(jq -r '.disallowed_skills["magi.yolo"] != null' <<<"$JSON")"
-assert_eq "magi.init allowed" "true" "$(jq -r '.allowed_skills | index("magi.init") != null' <<<"$JSON")"
-assert_eq "magi.plan allowed (warned not blocked)" "true" "$(jq -r '.allowed_skills | index("magi.plan") != null' <<<"$JSON")"
+assert_eq "tasks disallowed" "true" "$(jq -r '.disallowed_skills["tasks"] != null' <<<"$JSON")"
+assert_eq "go disallowed" "true" "$(jq -r '.disallowed_skills["go"] != null' <<<"$JSON")"
+assert_eq "yolo disallowed in BOOTSTRAP" "true" "$(jq -r '.disallowed_skills["yolo"] != null' <<<"$JSON")"
+assert_eq "init allowed" "true" "$(jq -r '.allowed_skills | index("init") != null' <<<"$JSON")"
+assert_eq "plan allowed (warned not blocked)" "true" "$(jq -r '.allowed_skills | index("plan") != null' <<<"$JSON")"
 cleanup "$T"
 
 # ── Case 2: INITIALIZED ──────────────────────────────────────────────────
@@ -74,9 +74,9 @@ echo "# README" > "$T/README.md"
 echo "# CLAUDE" > "$T/CLAUDE.md"
 JSON=$(run_in "$T")
 assert_eq "state" "INITIALIZED" "$(jq -r .state <<<"$JSON")"
-assert_eq "magi.tasks disallowed" "true" "$(jq -r '.disallowed_skills["magi.tasks"] != null' <<<"$JSON")"
-assert_eq "magi.commit allowed (has untracked diff)" "true" "$(jq -r '.allowed_skills | index("magi.commit") != null' <<<"$JSON")"
-assert_eq "magi.yolo allowed in INITIALIZED" "true" "$(jq -r '.allowed_skills | index("magi.yolo") != null' <<<"$JSON")"
+assert_eq "tasks disallowed" "true" "$(jq -r '.disallowed_skills["tasks"] != null' <<<"$JSON")"
+assert_eq "commit allowed (has untracked diff)" "true" "$(jq -r '.allowed_skills | index("commit") != null' <<<"$JSON")"
+assert_eq "yolo allowed in INITIALIZED" "true" "$(jq -r '.allowed_skills | index("yolo") != null' <<<"$JSON")"
 cleanup "$T"
 
 # ── Case 3: PLANNING ─────────────────────────────────────────────────────
@@ -88,9 +88,9 @@ echo "# Plan" > "$T/magi/01-foo/PLAN.md"
 JSON=$(run_in "$T")
 assert_eq "state" "PLANNING" "$(jq -r .state <<<"$JSON")"
 assert_eq "sprint_dir" "magi/01-foo" "$(jq -r .sprint_dir <<<"$JSON")"
-assert_eq "magi.tasks allowed" "true" "$(jq -r '.allowed_skills | index("magi.tasks") != null' <<<"$JSON")"
-assert_eq "magi.go disallowed (no TASKS)" "true" "$(jq -r '.disallowed_skills["magi.go"] != null' <<<"$JSON")"
-assert_eq "magi.web.backend allowed" "true" "$(jq -r '.allowed_skills | index("magi.web.backend.spec") != null' <<<"$JSON")"
+assert_eq "tasks allowed" "true" "$(jq -r '.allowed_skills | index("tasks") != null' <<<"$JSON")"
+assert_eq "go disallowed (no TASKS)" "true" "$(jq -r '.disallowed_skills["go"] != null' <<<"$JSON")"
+assert_eq "web-backend-spec allowed" "true" "$(jq -r '.allowed_skills | index("web-backend-spec") != null' <<<"$JSON")"
 cleanup "$T"
 
 # ── Case 4: PLAN_REVIEWED ────────────────────────────────────────────────
@@ -115,7 +115,7 @@ JSON=$(run_in "$T")
 assert_eq "state" "TASKS_READY" "$(jq -r .state <<<"$JSON")"
 assert_eq "tasks_total" "2" "$(jq -r .tasks_total <<<"$JSON")"
 assert_eq "tasks_done" "0" "$(jq -r .tasks_done <<<"$JSON")"
-assert_eq "magi.go allowed" "true" "$(jq -r '.allowed_skills | index("magi.go") != null' <<<"$JSON")"
+assert_eq "go allowed" "true" "$(jq -r '.allowed_skills | index("go") != null' <<<"$JSON")"
 cleanup "$T"
 
 # ── Case 6: IN_PROGRESS ──────────────────────────────────────────────────
@@ -154,11 +154,11 @@ echo "# Works" > "$T/magi/01-foo/WORKS.md"
 echo "# Drift" > "$T/magi/01-foo/DRIFT.md"
 JSON=$(run_in "$T")
 assert_eq "state" "CODE_REVIEWED" "$(jq -r .state <<<"$JSON")"
-assert_eq "magi.commit allowed" "true" "$(jq -r '.allowed_skills | index("magi.commit") != null' <<<"$JSON")"
+assert_eq "commit allowed" "true" "$(jq -r '.allowed_skills | index("commit") != null' <<<"$JSON")"
 cleanup "$T"
 
 # ── Case 9: HOTFIX mode ──────────────────────────────────────────────────
-echo "=== Case 9: HOTFIX mode (HOTFIX.md, no TASKS — magi.go still allowed) ==="
+echo "=== Case 9: HOTFIX mode (HOTFIX.md, no TASKS — go still allowed) ==="
 T=$(make_repo)
 echo "# README" > "$T/README.md"
 mkdir -p "$T/magi/01-foo"
@@ -166,7 +166,7 @@ echo "# Hotfix" > "$T/magi/01-foo/HOTFIX.md"
 JSON=$(run_in "$T")
 assert_eq "state" "PLANNING" "$(jq -r .state <<<"$JSON")"
 assert_eq "hotfix_mode" "true" "$(jq -r .hotfix_mode <<<"$JSON")"
-assert_eq "magi.go allowed (hotfix bypass)" "true" "$(jq -r '.allowed_skills | index("magi.go") != null' <<<"$JSON")"
+assert_eq "go allowed (hotfix bypass)" "true" "$(jq -r '.allowed_skills | index("go") != null' <<<"$JSON")"
 cleanup "$T"
 
 # ── Case 10: warning — tasks_without_plan ────────────────────────────────
