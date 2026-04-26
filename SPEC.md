@@ -86,11 +86,13 @@ Every slash command supports its applicable subset:
 | `--staged` | review | Review only staged changes. |
 | `--workdir <path>` | review-plan, review | Reuse a previous orchestrator workdir; skip fan-out, re-run consensus. |
 | `--milestone N` / `--task T<m>.<n>` | work | Pick what to dispatch. |
-| `--parallel` | work | Dispatch `🔀` lanes in parallel. |
+| `--parallel` / `--sequential` | work | Force parallel dispatch / force sequential (debug). Default is auto-detect by file scope. |
+| `--into <path>` | plan | Write into an existing sprint folder (e.g. `magi/03-foo/`) instead of creating a new one. |
+| `--force` | plan, work | Skip preflight checks (advanced/recovery only — e.g. resume a corrupted sprint). |
 | `--reset` / `--recheck` | setup | Wipe config / re-validate without resetting. |
 | `--all` / `--only` / `--dry-run` | init | Auto-create all / restrict to subset / preview without writing. |
 | `--mode sprint\|standalone` | commit | Force commit mode (default: auto-detect). |
-| `--sprint <slug>` | commit, work, tasks | Explicit sprint folder. |
+| `--sprint <slug>` | commit, work, tasks, status | Explicit sprint folder (status: switch which sprint state is reported). |
 | `--skip-review` | commit | Sprint mode only: bypass missing DRIFT.md. |
 | `--no-root-sync` / `--root-sync-strict` | commit | Skip root-doc sync / use Level 1 heuristic only. |
 

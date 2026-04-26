@@ -1,7 +1,7 @@
 # magi-workflow
 
 [![License: MIT](https://img.shields.io/github/license/howar31/magi-workflow?color=blue)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v0.7.1-blue)](.claude-plugin/plugin.json)
+[![Version](https://img.shields.io/badge/version-v0.8.0-blue)](.claude-plugin/plugin.json)
 [![Built for Claude Code](https://img.shields.io/badge/built%20for-Claude%20Code-CC785C)](https://claude.com/claude-code)
 [![Made with Bash](https://img.shields.io/badge/made%20with-Bash-1f425f?logo=gnu-bash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Conventional Commits](https://img.shields.io/badge/conventional%20commits-1.0.0-yellow)](https://www.conventionalcommits.org)
@@ -368,7 +368,10 @@ Fresh 模式從 `/magi:plan` 執行至 `/magi:commit`。Resume 模式偵測 spri
 | `--workdir <path>` | review-plan / review-code | 重用既有 workdir，跳過 fan-out 並重新執行 consensus |
 | `--milestone N` | work | `--milestone 2` — 派工指定 milestone |
 | `--task T<m>.<n>` | work | `--task T2.3` — 派工單一任務 |
-| `--parallel` | work | 同 milestone 內標記 🔀 的任務並行派工 |
+| `--parallel` / `--sequential` | work | 強制平行 / 強制序列(預設依檔案 scope 自動判斷) |
+| `--into <path>` | plan | `--into magi/03-foo/` — 寫入既有 sprint 資料夾,而非新建 |
+| `--force` | plan / work | 跳過 preflight(進階/恢復用,例如毀損 sprint 中段恢復) |
+| `--sprint <slug>` | commit / tasks / work / status | 明確指定 sprint 資料夾(status: 切換要顯示哪個 sprint 狀態) |
 | `--reset` / `--recheck` | setup | 清除 config 重新設定 / 保留 config 重新驗證 |
 
 完整 flag 規格見 [`SPEC.md` § Override flags](SPEC.md#override-flags-phase-b)。
@@ -470,6 +473,8 @@ chmod +x .git/hooks/{commit-msg,pre-commit,pre-push}
 | `/magi:review-plan` | `MAGI_PLAN_REVIEW.md` |
 | `/magi:review-code`（MAGI） | `MAGI_CODE_REVIEW.md` + `DRIFT.md`（一律產出，`Status: NONE` / `DETECTED`） |
 | `/magi:review-code --single` | `SINGLE_CODE_REVIEW.md` + `DRIFT.md` |
+| `/magi:web-frontend-spec` | 於 sprint `SPEC.md` 追加 `## Frontend` 段落（component / a11y / e2e） |
+| `/magi:web-backend-spec` | 於 sprint `SPEC.md` 追加 `## Backend` 段落（API contract / migration / authz） |
 | `/magi:web-infra-plan` | `INFRA.md`（含 `plan.tfplan` / `plan.json`） |
 | `/magi:web-ci-spec` | `CI.md` + workflow YAML 草稿 |
 

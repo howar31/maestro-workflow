@@ -26,6 +26,34 @@ Verify `$PLUGIN_ROOT/skills` is a directory. If not, the plugin is
 installed incorrectly — print a one-line error pointing to the install
 instructions and stop.
 
+## 0.05. Parse arguments
+
+The only supported flag is `--sprint <slug>`, which switches which sprint
+folder's state is reported (default: latest by numeric prefix). Useful
+when the `other_in_progress_sprint` warning points to an earlier sprint.
+
+```bash
+SPRINT_OVERRIDE=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --sprint) SPRINT_OVERRIDE="${2:-}"; shift 2 ;;
+    --sprint=*) SPRINT_OVERRIDE="${1#*=}"; shift ;;
+    *) shift ;;   # unknown flags ignored to keep the skill forgiving
+  esac
+done
+```
+
+If `$SPRINT_OVERRIDE` is set, validate the folder exists before calling
+`detect-state.sh` (which would otherwise silently fall back to the latest
+sprint and produce misleading output):
+
+```bash
+if [[ -n "$SPRINT_OVERRIDE" && ! -d "magi/$SPRINT_OVERRIDE" ]]; then
+  echo "Sprint not found: magi/$SPRINT_OVERRIDE"
+  exit 0   # not a hard error — keep status read-only and forgiving
+fi
+```
+
 ## 0.1. Output language
 
 Read `output_language` from `$USER_CONFIG` if it exists; default `zh-TW`.
@@ -47,8 +75,12 @@ English. The parenthetical hint after the suggested command follows
 
 ```bash
 STATE_JSON=""
-if STATE_RAW=$(bash "$PLUGIN_ROOT/scripts/shared/detect-state.sh" 2>/dev/null); then
-  STATE_JSON="$STATE_RAW"
+if [[ -n "$SPRINT_OVERRIDE" ]]; then
+  STATE_RAW=$(bash "$PLUGIN_ROOT/scripts/shared/detect-state.sh" --sprint "$SPRINT_OVERRIDE" 2>/dev/null) \
+    && STATE_JSON="$STATE_RAW"
+else
+  STATE_RAW=$(bash "$PLUGIN_ROOT/scripts/shared/detect-state.sh" 2>/dev/null) \
+    && STATE_JSON="$STATE_RAW"
 fi
 ```
 
@@ -146,9 +178,10 @@ Next:  /magi:commit
   or any project file. Read-only.
 - **No subagents, no external CLIs**: just `jq` against the JSON from
   `detect-state.sh`.
-- **Single purpose, no flags in v1**: do not accept `--json`,
-  `--verbose`, `<state>` overrides, or any other argument. The point of
-  this skill is "scan in two seconds"; every flag dilutes that. Future
+- **Single purpose, minimal surface**: the only supported flag is
+  `--sprint <slug>` (switch which sprint's state is reported). Do not
+  accept `--json`, `--verbose`, `<state>` overrides, or any other
+  argument — every flag dilutes the "scan in two seconds" point. Further
   expansion is an explicit decision, not creep.
 - **Mapping parity**: the state→suggestion table must stay identical to
   `/magi:help` Section E. The `<!-- KEEP IN SYNC -->` marker above
