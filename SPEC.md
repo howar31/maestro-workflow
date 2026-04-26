@@ -768,6 +768,39 @@ Or via slash commands inside a session: `/plugin marketplace add ...` +
 same source — choice is purely about which marketplace registration the
 user prefers.
 
+## Plugin versioning
+
+The `version` field in `.claude-plugin/plugin.json` is the only signal Claude Code uses to detect updates for installed plugins. Bumping it is part of "shipping", not an afterthought.
+
+### Bump rules (pre-1.0)
+
+| Change | Bump |
+|--------|------|
+| Bug fix, internal refactor, docs-only that ships with plugin | patch (`0.1.0` → `0.1.1`) |
+| New skill, new flag, new user-visible behavior (backwards-compatible) | minor (`0.1.0` → `0.2.0`) |
+| Removed/renamed command, breaking flag / contract change | minor while pre-1.0; major once ≥ 1.0 |
+| Pure dev/test-only changes not shipped (e.g. `test/`, internal scripts) | no bump |
+
+### User-visible surfaces
+
+Touching any of these is a candidate for bump:
+
+- `skills/`
+- `agents/`
+- `commands/`
+- `scripts/` files sourced at runtime
+- `references/`
+- root `README.md` and `CLAUDE.md`
+- `.claude-plugin/*.json`
+
+### Process
+
+Whoever drives the commit (human or `/magi.commit`) checks the staged diff against the bump table and confirms the bump (or records an explicit skip with reason) before the commit lands. Bump and code go in the same commit.
+
+### Tagging (optional but recommended)
+
+`git tag v<MAJOR>.<MINOR>.<PATCH>` and push. Claude Code itself does not require the tag — it reads `plugin.json`. Tags exist for GitHub Releases / changelog purposes.
+
 ## Still out of scope
 
 - Submission to Anthropic's official `claude-plugins-official` marketplace
