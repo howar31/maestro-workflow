@@ -1,6 +1,6 @@
 {
   "name": "magi",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Multi-model engineering workflow with MAGI weighted voting and cross-CLI orchestration",
   "author": {
     "name": "howar31",

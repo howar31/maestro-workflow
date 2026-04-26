@@ -44,8 +44,12 @@ Decision rule: "Want to see it on first opening the repo?" → Tier 1. "Referenc
 ## Slash commands (Phase B)
 
 Every command's SKILL.md has `disable-model-invocation: true` — it only runs
-when the user explicitly types the slash. Skills delegate to the
-orchestrator + magi-consensus shell scripts and to the two subagents below.
+when the user explicitly types the slash. The single intentional exception
+is `/magi:status`: a read-only quick-look printer with no destructive side
+effects, left auto-invocable so Claude can self-orient when the user is
+mid-flow but the conversation is ambiguous about what to do next. Skills
+delegate to the orchestrator + magi-consensus shell scripts and to the two
+subagents below.
 
 | Command | Body summary |
 |---------|--------------|
@@ -257,16 +261,25 @@ magi-workflow has 8 project states derived purely from filesystem inspection. Si
 | `commit` | CODE_REVIEWED (sprint mode) or any state with `has_diff=true` (standalone) | per commit |
 | `web-*` | PLANNING + later | optional add-ons |
 
-### Staleness warnings (mtime-based)
+### detect-state warnings
 
-| Warning type | Condition | Affects |
-|--------------|-----------|---------|
-| `stale_plan_review` | `mtime(MAGI_PLAN_REVIEW.md) < mtime(PLAN/SPEC/TICKET.md)` | `/magi:tasks` |
-| `stale_drift` | `mtime(DRIFT.md) < mtime(any modified code file)` | `/magi:commit` |
-| `tasks_without_plan` | `TASKS.md` exists but no plan-equivalent | `/magi:go` |
-| `works_without_tasks` | `WORKS.md` exists but no `TASKS.md` | warning only |
+`detect-state.sh` may emit any of the following warnings alongside the
+state. They never demote state — file existence still defines state — and
+skills surface them to the user after a successful preflight.
 
-Staleness does **not** demote state — file existence still defines state. Skills surface relevant warnings to the user after a successful preflight.
+| Warning type | Condition | Affects | Mechanism |
+|--------------|-----------|---------|-----------|
+| `stale_plan_review` | `mtime(MAGI_PLAN_REVIEW.md) < mtime(PLAN/SPEC/TICKET.md)` | `/magi:tasks` | mtime |
+| `stale_drift` | `mtime(DRIFT.md) < mtime(any modified code file)` | `/magi:commit` | mtime |
+| `tasks_without_plan` | `TASKS.md` exists but no plan-equivalent | `/magi:go` | existence |
+| `works_without_tasks` | `WORKS.md` exists but no `TASKS.md` | warning only | existence |
+| `other_in_progress_sprint` | latest sprint state ∈ {WORK_DONE, CODE_REVIEWED, INITIALIZED, BOOTSTRAP} **and** an earlier sprint has TASKS.md + WORKS.md + unchecked tasks (no DRIFT.md) | `/magi:status`, `/magi:help` | existence + checkbox count |
+
+Only `other_in_progress_sprint` aggregates across sprint folders; the rest
+look at the current sprint or root-level files only. `/magi:status`
+renders this one as `⚠ Also in progress: <dir> (IN_PROGRESS) — /magi:status --sprint <slug>`,
+visually distinct from the staleness warnings' two-line `⚠ <reason>` /
+`   → <suggest>` form.
 
 ## Smart dispatcher (Phase 2)
 
@@ -727,6 +740,19 @@ preferences (pnpm / uv / rg / fd / jq), ask-vs-act guidance, SSOT
 discipline, output language rules, and failure-mode playbook. The user's
 own project-level `CLAUDE.md` always overrides this file.
 
+### Empirical pitfalls (`references/LESSONS.md`)
+
+A skill-segmented log of LLM misbehaviors observed during real
+magi-workflow sessions. Each entry is a one-line empirical incident —
+no theoretical "what if" entries — recording the trigger phrase that
+made Claude shortcut the magi flow plus the required corrective
+behavior. `/magi:plan` and `/magi:go` end-of-body pointers tell the
+coordinator to read the relevant section before drafting / dispatching,
+so accumulated incidents auto-load into future sessions and harden the
+flow over time. New entries are appended by the plugin developer when
+Claude misbehaves; the discipline rule lives in this repo's own
+`CLAUDE.md` (does not propagate to user projects).
+
 ### Optional git hooks (`hooks/`)
 
 | Hook | Behaviour |
@@ -813,7 +839,10 @@ Whoever drives the commit (human or `/magi:commit`) checks the staged diff again
   Cross-sprint conflict resolution (e.g., two sprints both modifying root
   SPEC.md, `/magi:commit` mode-detection picking the wrong sprint, review
   consensus across simultaneous branches) deferred until team-collaborative
-  use accumulates real evidence.
+  use accumulates real evidence. **Single-user multi-sprint visibility**
+  (latest sprint wound down but earlier sprint still in progress) is
+  partially addressed since v0.7.0 via the `other_in_progress_sprint`
+  warning surfaced by `/magi:status` and `/magi:help`.
 - **Reflexion strengthening on B-class drift** — DRIFT.md retains B-class
   items (developer choices below the contract) as static audit trail. A
   future iteration may detect when a particular kind of B-class entry
