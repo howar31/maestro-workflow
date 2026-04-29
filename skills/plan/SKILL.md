@@ -194,6 +194,12 @@ If they exist, read:
 - `magi/TECHSTACK.md` — language, framework, deployment constraints
 - `CLAUDE.md` / `AGENTS.md` (root) — project conventions
 
+**Additionally, when the chosen artifact is `PLAN.md` or `SPEC.md`** (i.e.,
+major scale where Spec deltas apply — see §3), also read the root `SPEC.md`
+if it exists. The deltas drafting step (§3) needs to know the current
+section structure of root SPEC.md to declare modifications coherently.
+TICKET.md / HOTFIX.md skip this extra read.
+
 If none exist, ask the user once whether they want to set up `magi/PRD.md`
 and `magi/TECHSTACK.md` first (offer a brief template). If they decline,
 proceed with whatever context the user supplies inline.
@@ -208,6 +214,30 @@ Decide between **PLAN.md** and **SPEC.md** based on the request:
   ADRs, API contracts. Disciplined structure.
 
 If unclear, draft `PLAN.md` and offer to upgrade to `SPEC.md` after review.
+
+### 3.0. Drafting Spec deltas (PLAN.md / SPEC.md only)
+
+Before writing the file, decide what goes under `## Spec deltas`. For each
+of the four project-level living documents, ask yourself:
+
+> Does the design in this plan require modifying a section of this document?
+
+| Document | What it owns |
+|----------|--------------|
+| root `SPEC.md` | architecture, feature contracts, system-wide invariants |
+| root `CLAUDE.md` | AI-agent index: commands, conventions, file pointers |
+| magi/`PRD.md` | product requirements, user-facing behavior |
+| magi/`TECHSTACK.md` | language / framework / deployment constraints |
+
+If the answer is yes, add a bullet under that subheading: `**Section:
+<name>** — <add | modify | remove>`, plus a one-sentence `Why:` and a
+one-sentence `New content:`. If no, write `(none)` — never omit a
+subheading. Be concrete: "Section: Slash commands → modify (add `--strict-deltas`
+flag)" beats "the spec needs updating somewhere".
+
+**TICKET.md and HOTFIX.md skip this step entirely** — they do not contain
+a Spec deltas section. Root-doc impacts in those scopes (rare) fall back to
+`/magi:commit`'s Level 1 heuristic.
 
 ### PLAN.md structure
 
@@ -228,6 +258,26 @@ Include code paths, data shape changes, and any new dependencies.
 
 ## Open questions
 What remains uncertain. The /magi:review-plan step should help resolve.
+
+## Spec deltas
+Declare which project-level living documents this sprint will modify.
+`/magi:review-plan` evaluates these declarations; `/magi:commit` verifies
+they match the actual diff. If the sprint touches no project-level docs,
+write `(none)` under every subheading — do not omit subheadings.
+
+### root `SPEC.md`
+- **Section: <name>** — <add | modify | remove>
+  Why: <one sentence>
+  New content: <one sentence describing the post-change shape>
+
+### root `CLAUDE.md`
+(none)
+
+### magi/`PRD.md`
+(none)
+
+### magi/`TECHSTACK.md`
+(none)
 
 ## Verification
 How we will know the implementation is correct.
@@ -255,6 +305,26 @@ Concrete, testable statements.
 Endpoints, payloads, schemas.
 
 ## Out of scope
+
+## Spec deltas
+Declare which project-level living documents this sprint will modify.
+`/magi:review-plan` evaluates these declarations; `/magi:commit` verifies
+they match the actual diff. If the sprint touches no project-level docs,
+write `(none)` under every subheading — do not omit subheadings.
+
+### root `SPEC.md`
+- **Section: <name>** — <add | modify | remove>
+  Why: <one sentence>
+  New content: <one sentence describing the post-change shape>
+
+### root `CLAUDE.md`
+(none)
+
+### magi/`PRD.md`
+(none)
+
+### magi/`TECHSTACK.md`
+(none)
 
 ## Verification plan
 ```
@@ -335,6 +405,11 @@ the sprint folder is created, also update `magi/BACKLOG.md`:
 
 After writing, **stop and ask the user to confirm**. Do not auto-trigger
 `/magi:review-plan`. The user is the gate.
+
+For PLAN.md / SPEC.md: explicitly draw the user's attention to the
+`## Spec deltas` section. It is the contract surface that `/magi:review-plan`
+will scrutinize and `/magi:commit` will verify against the actual diff —
+errors here propagate downstream.
 
 If the user wants edits, iterate until they confirm.
 

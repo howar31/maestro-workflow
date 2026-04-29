@@ -79,6 +79,27 @@ Then end with:
   <one paragraph rationale>
 
 Do not produce any other output sections. Do not edit files.
+
+[Special focus — Spec deltas section]
+If the document under review contains a `## Spec deltas` section
+declaring modifications to project-level living documents (root SPEC.md,
+root CLAUDE.md, magi/PRD.md, magi/TECHSTACK.md), evaluate it critically:
+
+- Are the declared modifications justified by the design described above?
+- Are there obvious omissions — impacts the design implies but no delta
+  lists (e.g., the plan adds a CLI flag but does not declare a delta to
+  the SPEC.md flag table)?
+- Does any declared modification break a contract documented elsewhere
+  in the targeted file (e.g., contradicting an existing ADR)?
+
+Surface delta-related concerns as standard `## Issue:` blocks and prefix
+the subject with `[deltas]` so downstream consensus aggregation can
+group them. If the deltas look correct, do not invent issues — silence
+is a valid signal.
+
+If `## Spec deltas` is missing entirely from a PLAN.md or SPEC.md, raise
+one Important `[deltas]` issue saying so. (TICKET.md and HOTFIX.md never
+contain this section — do not raise the issue against those.)
 ```
 
 ## 3. Argument parsing

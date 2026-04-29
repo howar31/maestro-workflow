@@ -40,6 +40,7 @@ Decision rule: "Want to see it on first opening the repo?" → Tier 1. "Referenc
 | F-Phase 1 | Drift detection (`/magi:review-code` + `magi-reviewer`) + `/magi:commit` (dual-mode) + `/magi:init` (bootstrap) + `/magi:plan` backlog awareness | ✅ done |
 | F-Phase 2 | `/magi.work` → `/magi:go` rename, `scripts/shared/detect-state.sh` (single-source state model), state-aware preflight + handoff in every skill, `/magi:plan` dispatcher (type/scale × routing), TICKET.md + HOTFIX.md templates, `/magi:go` auto-parallel default | ✅ done |
 | F-Phase 3 | `/magi:yolo` headless walk-away mode (fresh + resume modes; full pipeline without prompts; conservative auto-decisions; YOLO_LOG audit; abort-on-failure; `--push` with default-branch safety) | ✅ done |
+| F-Phase 4 | Spec deltas — declarative root-doc contract (PLAN/SPEC `## Spec deltas` section; `/magi:review-plan` evaluates declarations; `/magi:commit` §2.5 D1/D2/D3 verification; `--strict-deltas` strict mode) | ✅ done |
 
 ## Slash commands (Phase B)
 
@@ -57,12 +58,12 @@ subagents below.
 | `/magi:status` | Terse "where am I, what's next" printer. Reads `detect-state.sh` JSON and emits `State:`, `Sprint:` (when present), `Next:`, plus any active warnings — typically 3–6 lines. Subset of `/magi:help` Section E without the roster / flow / flags. State→suggestion mapping is identical to `/magi:help`'s and must be kept in sync. Always allowed in any state. |
 | `/magi:setup [--reset \| --recheck]` | Healthcheck CLIs via `preflight.sh`, ask user for reviewer roster + weights + MAGI mode + nvm version + output language, write `~/.config/magi-workflow/config.json`, validate with a tiny dry-run via the orchestrator. |
 | `/magi:init [--all] [--only <list>] [--dry-run]` | One-time, idempotent project bootstrap. Detects missing Tier 1 (`CLAUDE.md` / `README.md` / `SPEC.md`) and Tier 2 (`magi/PRD.md` / `magi/TECHSTACK.md` / `magi/BACKLOG.md`) files; offers minimal scaffolds; never overwrites. |
-| `/magi:plan [slug] "<desc>"` | Resolve `magi/<num>-<slug>/`, read project context (PRD/TECHSTACK/CLAUDE/AGENTS), decide PLAN.md vs SPEC.md, draft, pause for user confirmation. **Bare invocation** (no description argument) reads `magi/BACKLOG.md` `## Pending` entries; user picks a number → that entry seeds the new sprint and is moved to `## Promoted to sprints`. With description argument, BACKLOG.md is fully ignored. |
+| `/magi:plan [slug] "<desc>"` | Resolve `magi/<num>-<slug>/`, read project context (PRD/TECHSTACK/CLAUDE/AGENTS + root SPEC.md when drafting PLAN/SPEC), decide PLAN.md vs SPEC.md, draft (PLAN/SPEC templates include a `## Spec deltas` section declaring expected modifications to root SPEC.md / CLAUDE.md / magi/PRD.md / magi/TECHSTACK.md), pause for user confirmation. **Bare invocation** (no description argument) reads `magi/BACKLOG.md` `## Pending` entries; user picks a number → that entry seeds the new sprint and is moved to `## Promoted to sprints`. With description argument, BACKLOG.md is fully ignored. TICKET.md / HOTFIX.md skip the deltas section. |
 | `/magi:tasks [<num>-<slug>] [--milestones N]` | Read PLAN/SPEC, write TASKS.md with milestones + atomic tasks, mark `🔀` lanes for parallelisable work, pause for confirmation. |
 | `/magi:review-plan [--reviewers ...] [--magi <mode>]` | Build review prompt from PLAN/SPEC, invoke orchestrator, run magi-consensus, then **the coordinator** applies semantic dedup + weighted vote per `references/MAGI_VOTING.md`, writes `MAGI_PLAN_REVIEW.md`. |
 | `/magi:go [--milestone N \| --task T<m>.<n>] [--parallel] [--model ...]` | Read TASKS.md, dispatch `magi-developer` per task (or per `🔀` lane in parallel), aggregate DONE/BLOCKED, append to WORKS.md, pause before commit. |
 | `/magi:review-code [--single] [--magi <mode>] [--diff <range>]` | Default: orchestrator + MAGI on `git diff`. `--single`: dispatch `magi-reviewer` only. Reviewer prompt includes per-feature PLAN/SPEC; reviewers output `## Drift from contract` (A/B/C). Writes `MAGI_CODE_REVIEW.md` (or `SINGLE_CODE_REVIEW.md`) **and** `<sprint>/DRIFT.md` (always, with `Status: NONE`/`DETECTED` header). Never auto-commits. |
-| `/magi:commit [push] [--mode sprint\|standalone] [--sprint <slug>] [--skip-review] [--no-root-sync] [--root-sync-strict]` | Auto-detects mode. **Sprint mode**: read `<sprint>/DRIFT.md`, prompt user per A-class to backfill PLAN/SPEC, prompt per C-class to promote to `magi/BACKLOG.md`. Then optional Level-2 root-doc sync. Generate Conventional Commits message. **Standalone mode**: skip drift; root-sync detection + commit. Single commit per invocation; never auto-commits. |
+| `/magi:commit [push] [--mode sprint\|standalone] [--sprint <slug>] [--skip-review] [--no-root-sync] [--root-sync-strict] [--strict-deltas]` | Auto-detects mode. **Sprint mode**: read `<sprint>/DRIFT.md`, prompt user per A-class to backfill PLAN/SPEC, prompt per C-class to promote to `magi/BACKLOG.md`. Then §2.5 **Delta verification**: parse `## Spec deltas` from PLAN/SPEC, classify diff vs declarations as D1 (declared but missing), D2 (modified but undeclared), or D3 (match); D1/D2 prompt interactively (lenient default) or abort under `--strict-deltas`. When deltas verified, §3 root-sync downgrades to Level 1 only. Generate Conventional Commits message. **Standalone mode**: skip drift and §2.5; root-sync detection + commit. Single commit per invocation; never auto-commits. |
 | `/magi:yolo "<desc>" \| --resume [...]` | Headless / walk-away mode. **Fresh** (`<desc>` given): create new sprint, run plan→tasks→work→review-code→commit. **Resume** (`--resume`): continue existing sprint from current state, skipping completed phases. Refused in BOOTSTRAP. Auto-decisions: drift A auto-ignore, drift C auto-promote, root-sync auto-skip, commit message auto-generated. `--push` refused on default branch unless explicitly allowed. Audit log at `<sprint>/YOLO_LOG.md`. Aborts and preserves state on any failure. |
 
 ## Subagents (Phase C — folded into B)
@@ -94,7 +95,8 @@ Every slash command supports its applicable subset:
 | `--mode sprint\|standalone` | commit | Force commit mode (default: auto-detect). |
 | `--sprint <slug>` | commit, work, tasks, status | Explicit sprint folder (status: switch which sprint state is reported). |
 | `--skip-review` | commit | Sprint mode only: bypass missing DRIFT.md. |
-| `--no-root-sync` / `--root-sync-strict` | commit | Skip root-doc sync / use Level 1 heuristic only. |
+| `--no-root-sync` / `--root-sync-strict` | commit | Skip root-doc sync (also skips §2.5 delta verification) / use Level 1 heuristic only. |
+| `--strict-deltas` | commit | Sprint mode only. §2.5 D1/D2 deltas mismatches → exit non-zero instead of interactive prompt. Incompatible with `--no-root-sync`. |
 
 ## Phase A architecture
 
@@ -498,6 +500,101 @@ Yolo and the manual flow share **all artifacts** (PLAN/SPEC/TICKET/HOTFIX, TASKS
 | (no flag) | auto-detect; trust `🔀` lanes; sequential when uncertain |
 | `--parallel` | force parallel for entire batch |
 | `--sequential` | force sequential (debug mode) |
+
+## Spec deltas (Phase 4)
+
+A sprint's `PLAN.md` / `SPEC.md` carries a `## Spec deltas` section
+declaring which **project-level living documents** the sprint expects to
+modify, before any code is written. The mechanism converts root-doc sync
+from heuristic detection into contract verification, and gives MAGI plan
+reviewers a concrete signal to evaluate.
+
+### Schema
+
+`## Spec deltas` has four fixed subheadings, one per project-level
+living doc. Empty subheadings carry the literal string `(none)`; never
+omit a subheading.
+
+```markdown
+## Spec deltas
+
+### root `SPEC.md`
+- **Section: <name>** — <add | modify | remove>
+  Why: <one sentence>
+  New content: <one sentence describing the post-change shape>
+
+### root `CLAUDE.md`
+(none)
+
+### magi/`PRD.md`
+(none)
+
+### magi/`TECHSTACK.md`
+(none)
+```
+
+The four targets are exactly the four files magi-workflow recognizes as
+"project-level living documents": root `SPEC.md`, root `CLAUDE.md`,
+`magi/PRD.md`, `magi/TECHSTACK.md`. The list is closed; new project-level
+docs would require a schema bump.
+
+### Scope (Type × Scale)
+
+| Artifact | Has `## Spec deltas`? |
+|----------|----------------------|
+| `PLAN.md` (major) | ✅ yes |
+| `SPEC.md` (major) | ✅ yes |
+| `TICKET.md` (minor) | ❌ no — root-doc impact rare; falls back to Level 1 |
+| `HOTFIX.md` (urgent) | ❌ no — fast-path; no deltas overhead |
+
+### Lifecycle
+
+| Phase | Skill | Behavior |
+|-------|-------|----------|
+| **Declare** | `/magi:plan` | Coordinator drafts the section by self-questioning each of the four target docs. Reads root `SPEC.md` in §2 to ground its declarations. |
+| **Evaluate** | `/magi:review-plan` | Reviewer prompt instructs CLIs to evaluate the section: justification, omissions, contract breaks. Issues prefixed `[deltas]`. Missing section in PLAN/SPEC raises one Important `[deltas]` issue. |
+| **Verify** | `/magi:commit` §2.5 | Parse declared set; compare against `git diff --name-only HEAD` over the four files; classify D1 / D2 / D3. |
+| **Reconcile** | `/magi:commit` §2.5 lenient | Per-item prompt for D1 (`y backfill / n proceed-anyway / e edit`) and D2 (`y backfill declaration / n proceed-anyway / e revert change`). |
+| **Block** | `/magi:commit --strict-deltas` | Any D1 ∪ D2 → exit non-zero. Non-interactive. |
+| **Downgrade fallback** | `/magi:commit` §3 | When `deltas_verified=1`, Level 2 heuristic is skipped (deltas already covered the project-level docs); Level 1 still runs for infra signals (`package.json`, `Dockerfile`, etc.). |
+
+### Verification classification
+
+| Class | Definition | Resolution |
+|-------|-----------|-----------|
+| **D1 — Declared but missing** | declared in `## Spec deltas` but file not in `git diff` | Prompt user (forgot to update?) or abort under `--strict-deltas` |
+| **D2 — Modified but undeclared** | file in `git diff` but no declaration in `## Spec deltas` | Prompt user (backfill declaration? revert?) or abort under `--strict-deltas` |
+| **D3 — Match** | declared and modified | Silent pass; sets `deltas_verified=1` |
+
+Granularity is **file-level** in v1 (resolved via `git diff --name-only`).
+Section-level granularity (matching declared `Section: <name>` against
+diff hunk headers) deferred until empirical evidence shows file-level
+false-positive rate is unacceptable.
+
+### Relationship to DRIFT.md
+
+| | Spec deltas | DRIFT.md |
+|---|-------------|----------|
+| Direction | prospective (plan-time) | retrospective (code-review-time) |
+| Scope | project-level docs (root SPEC/CLAUDE, magi/PRD/TECHSTACK) | per-feature contract (PLAN/SPEC/TICKET/HOTFIX) |
+| Output | embedded section in PLAN/SPEC | separate `<sprint>/DRIFT.md` artifact |
+| Verifier | `/magi:commit` §2.5 | `/magi:commit` §2a (drift handling) |
+| Class names | D1 / D2 / D3 | A / B / C |
+
+The two are complementary, not redundant. A change that adds a CLI flag
+typically declares a delta against root SPEC.md (deltas D3 at commit
+time) AND triggers a DRIFT.md A item if the implementation diverged
+from the plan's flag spec. Both gates apply independently.
+
+### Bypass and exit modes
+
+| Flag | Effect on §2.5 |
+|------|---------------|
+| `--no-root-sync` | Skip §2.5 entirely (and §3). Incompatible with `--strict-deltas`. |
+| `--strict-deltas` | D1 ∪ D2 ≠ ∅ → exit non-zero. |
+| `--skip-review` | Skip §2.5 (already bypassing the contract gate). |
+| (sprint contract = TICKET.md / HOTFIX.md) | Skip §2.5 automatically (no deltas declared). |
+| (no `## Spec deltas` section in PLAN/SPEC) | Warn once; treat declared_set as ∅ (D1 cannot fire; D2 still detects undeclared modifications). |
 
 ## Drift detection (Phase 1)
 

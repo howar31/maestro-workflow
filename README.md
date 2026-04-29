@@ -1,7 +1,7 @@
 # magi-workflow
 
 [![License: MIT](https://img.shields.io/github/license/howar31/magi-workflow?color=blue&style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v0.8.0-blue?style=flat-square)](.claude-plugin/plugin.json)
+[![Version](https://img.shields.io/badge/version-v0.9.0-blue?style=flat-square)](.claude-plugin/plugin.json)
 [![Built for Claude Code](https://img.shields.io/badge/built%20for-Claude%20Code-CC785C?style=flat-square)](https://claude.com/claude-code)
 [![Made with Bash](https://img.shields.io/badge/made%20with-Bash-1f425f?logo=gnu-bash&logoColor=white&style=flat-square)](https://www.gnu.org/software/bash/)
 [![Conventional Commits](https://img.shields.io/badge/conventional%20commits-1.0.0-yellow?style=flat-square)](https://www.conventionalcommits.org)
@@ -23,6 +23,7 @@
 - **多 CLI 並行審議** — `claude` / `gemini` / `codex` 同步 fan-out 進行 review；採事件流協定，quota 或 auth 失敗時自動降級
 - **MAGI 加權投票** — 提供 4 種共識模式（majority / supermajority / unanimous / threshold）；reviewer 失敗時於報告中明示降級狀態
 - **契約即真理、自動 drift 偵測** — `/magi:plan` 產出的 PLAN / SPEC / TICKET / HOTFIX 為凍結契約；`/magi:review-code` 自動比對 code 與契約並輸出 `DRIFT.md`（A 類違反、B 類自由選擇、C 類觀察）；`/magi:commit` sprint mode 引導使用者將 A 類回填契約、C 類加入 `magi/BACKLOG.md`
+- **Spec deltas 宣告式契約變更** — `/magi:plan` 產出的 PLAN / SPEC 含 `## Spec deltas` 一節，預先宣告本 sprint 預期修改的 root `SPEC.md` / `CLAUDE.md` / `magi/PRD.md` / `magi/TECHSTACK.md`；`/magi:review-plan` 由 reviewer 評估宣告是否合理；`/magi:commit` §2.5 核對宣告 vs 實際 diff（D1 漏改 / D2 沒宣告 / D3 吻合），預設互動提示，`--strict-deltas` 下任何不一致直接 abort。Level 2 root-sync 啟發式於 deltas 通過時自動降級為 fallback
 - **雙模式 commit** — `/magi:commit` 自動偵測 sprint context；feature work 採 sprint mode，chore / docs / 小修正採 standalone mode，單一指令涵蓋所有 commit 情境
 - **領域中性** — 核心 slash command（init / plan / tasks / review-plan / go / review-code / commit / setup）不綁定特定技術棧
 - **Web 領域 add-ons** — frontend / backend / infra / ci 四個專用 spec skill，擴充標準 SPEC.md

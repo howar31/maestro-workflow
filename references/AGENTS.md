@@ -215,6 +215,31 @@ Any change to the feature flows through these documents. Code changes
 without a corresponding `WORKS.md` entry are an anti-pattern (the
 journal exists so future you can answer "why did we do it this way?").
 
+### Spec deltas (declared root-doc contract)
+
+`PLAN.md` and `SPEC.md` carry a `## Spec deltas` section declaring which
+**project-level living documents** (root `SPEC.md` / root `CLAUDE.md` /
+`magi/PRD.md` / `magi/TECHSTACK.md`) the sprint expects to modify. The
+section has four fixed subheadings; if no modification is planned, write
+`(none)` under the subheading rather than omitting it.
+
+This is the sprint's outward-facing contract:
+- `/magi:review-plan` reviewers evaluate whether declared modifications
+  are justified, complete, and non-conflicting with existing contracts.
+- `/magi:commit` (sprint mode) verifies the declarations against the
+  actual diff. Missing modifications (D1) and undeclared modifications
+  (D2) trigger interactive prompts; matched declarations (D3) pass
+  silently.
+
+`TICKET.md` and `HOTFIX.md` deliberately omit `## Spec deltas` — they
+are scoped below the project-doc tier. Root-doc changes from those
+artifacts (rare) flow through `/magi:commit`'s Level 1 heuristic only.
+
+Spec deltas are **prospective** (declared at plan time); `DRIFT.md` is
+**retrospective** (detected at code-review time). The two are
+complementary: deltas declare intent for project-level docs, drift
+detects deviation against the per-sprint contract.
+
 ## 7. Decision points and pauses
 
 The plugin pauses for user confirmation at every gate. **Never skip a

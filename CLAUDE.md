@@ -13,6 +13,9 @@ Per-command contract in `skills/<name>/SKILL.md`. → `SPEC.md §Slash commands`
 ## Project document tiers
 → `SPEC.md §Project document tiers`
 
+## Spec deltas
+PLAN/SPEC carry a `## Spec deltas` section declaring expected modifications to root `SPEC.md` / `CLAUDE.md` / `magi/PRD.md` / `magi/TECHSTACK.md`. Evaluated by `/magi:review-plan`; verified by `/magi:commit` §2.5 (D1/D2/D3). → `SPEC.md §Spec deltas`
+
 ## Commits
 - `/magi:commit` is the single in-project commit path (sprint + standalone). Independent of `~/.claude/skills/commit/`.
 - Before any commit, check whether `.claude-plugin/plugin.json` needs a bump per `SPEC.md §Plugin versioning`. Bump goes in the same commit.

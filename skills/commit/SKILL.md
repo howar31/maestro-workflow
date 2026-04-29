@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Commit the current change set with optional drift backfill (sprint mode) or as a generic Conventional Commits commit (standalone mode). Auto-detects which mode based on sprint context. Optionally syncs root docs (CLAUDE/README/SPEC) when project-level changes are detected. Never commits without user confirmation.
+description: Commit the current change set with optional drift backfill (sprint mode) or as a generic Conventional Commits commit (standalone mode). Auto-detects which mode based on sprint context. Sprint mode verifies declared spec deltas (PLAN.md / SPEC.md `## Spec deltas`) against the actual diff before staging; missing or undeclared root-doc changes are surfaced interactively (lenient default; `--strict-deltas` makes them blocking). Falls back to Level 1/2 heuristics when no deltas are declared. Never commits without user confirmation.
 disable-model-invocation: true
 ---
 
@@ -115,7 +115,7 @@ Tell the user the chosen mode before proceeding.
    warning): skip 3a/b/c entirely; record one line in the commit message
    body: `Note: committed with --skip-review; no drift report consulted.`
 
-5. Proceed to **§3 Root doc sync detection**.
+5. Proceed to **§2.5 Delta verification**.
 
 ### 2b. Standalone mode
 
@@ -125,12 +125,135 @@ all). It is intentionally a thin wrapper around the same root-sync detection
 + Conventional Commits message generation that Sprint mode uses.
 
 1. Skip drift handling entirely (no sprint context → no contract to check).
-2. Proceed to **§3 Root doc sync detection**.
+2. Skip §2.5 Delta verification (no sprint contract → no deltas declared).
+3. Proceed to **§3 Root doc sync detection**.
+
+## 2.5. Delta verification (sprint mode only)
+
+Before §3 (root-sync heuristic), reconcile the sprint's **declared spec
+deltas** against the **actual diff**. This converts root-doc sync from
+heuristic detection into contract verification: the plan announced what
+project-level docs would change; we now check reality.
+
+Skip §2.5 entirely when any of these hold:
+- `--no-root-sync` was passed (the user opted out of all root-doc gating)
+- The sprint contract artifact is `TICKET.md` or `HOTFIX.md` (these do
+  not contain `## Spec deltas`; rely on §3 Level 1 only)
+- No PLAN.md / SPEC.md exists in the sprint folder (already in 2a, but
+  guard explicitly here)
+- `--skip-review` was passed (user already bypassed the contract gate)
+
+Otherwise:
+
+### 2.5.1. Parse declared deltas
+
+```bash
+contract=""
+for f in "$sprint_dir/PLAN.md" "$sprint_dir/SPEC.md"; do
+  [[ -f "$f" ]] && contract="$f" && break
+done
+```
+
+If `contract` is empty (only TICKET.md / HOTFIX.md present), skip §2.5.
+
+Read `contract` and locate the `## Spec deltas` section. For each of the
+four fixed subheadings (`### root \`SPEC.md\``, `### root \`CLAUDE.md\``,
+`### magi/\`PRD.md\``, `### magi/\`TECHSTACK.md\``), record whether the
+subsection body is the literal string `(none)` or contains at least one
+bullet starting with `- **Section:`.
+
+Build `declared_set` = set of file paths whose subsection has at least
+one bullet:
+
+| Subheading | File path |
+|------------|-----------|
+| `### root \`SPEC.md\`` | `SPEC.md` |
+| `### root \`CLAUDE.md\`` | `CLAUDE.md` |
+| `### magi/\`PRD.md\`` | `magi/PRD.md` |
+| `### magi/\`TECHSTACK.md\`` | `magi/TECHSTACK.md` |
+
+If the `## Spec deltas` section is **missing entirely** from a PLAN.md /
+SPEC.md, warn the user once: "Sprint contract has no `## Spec deltas`
+section — your `/magi:plan` may pre-date this feature. Treating
+`declared_set` as empty; deltas verification will run in detection mode."
+Then continue with `declared_set = ∅`.
+
+### 2.5.2. Compute actual_set
+
+```bash
+actual_set=$(git diff --name-only HEAD -- \
+  SPEC.md CLAUDE.md magi/PRD.md magi/TECHSTACK.md 2>/dev/null)
+```
+
+Empty set is fine (the sprint genuinely modified nothing at this tier).
+
+### 2.5.3. Classify
+
+| Class | Definition | Default action |
+|-------|-----------|----------------|
+| **D1 — Declared but missing** | `declared_set ∖ actual_set` | Per-item prompt; assume "you forgot to update" |
+| **D2 — Modified but undeclared** | `actual_set ∖ declared_set` | Per-item prompt; assume "you should backfill the deltas, or this was unintended" |
+| **D3 — Match** | `declared_set ∩ actual_set` | Silent pass |
+
+If `D1 ∪ D2 == ∅` → set `deltas_verified=1` and proceed to §3. Tell the
+user "Spec deltas verified."
+
+### 2.5.4. Lenient mode (default)
+
+For each D1 item, prompt:
+```
+[deltas D1] Declared but not modified: <file>
+  Section(s) declared: <bulleted list of "Section: <name>" headings>
+  (y backfill / n proceed-anyway / e edit declaration)
+```
+- `y` → open `<file>` and let user make the modification; re-diff after
+- `n` → record `Note: D1 unresolved for <file>` in commit body; proceed
+- `e` → let user edit the deltas section in PLAN.md / SPEC.md to remove
+  the obsolete declaration; re-parse §2.5.1 and re-classify
+
+For each D2 item, prompt:
+```
+[deltas D2] Modified but not declared: <file>
+  (y backfill declaration / n proceed-anyway / e revert change)
+```
+- `y` → open the contract (`PLAN.md` or `SPEC.md`) `## Spec deltas`
+  section and append a bullet under the appropriate subheading; re-parse
+  §2.5.1 and re-classify
+- `n` → record `Note: D2 unresolved for <file>` in commit body; proceed
+- `e` → user reverts the file change; re-diff and re-classify
+
+When all D1/D2 items are resolved (or user said `n` to each), set
+`deltas_verified=1` and proceed to §3.
+
+### 2.5.5. Strict mode (`--strict-deltas`)
+
+If `--strict-deltas` was passed and `D1 ∪ D2 ≠ ∅`:
+
+```
+[deltas] strict mode: <N> declared-but-missing, <M> modified-but-undeclared
+  Re-run /magi:commit without --strict-deltas to handle interactively,
+  or update PLAN.md / SPEC.md ## Spec deltas to match the diff first.
+```
+
+Exit non-zero. Do not stage, do not commit.
+
+`--strict-deltas` is incompatible with `--no-root-sync` (they contradict).
+If both set, abort with usage error.
 
 ## 3. Root doc sync detection (shared by both modes)
 
-Apply the **Level 2 (aggressive) heuristic** unless `--root-sync-strict` is
-set (which downgrades to Level 1) or `--no-root-sync` is set (skips entirely).
+Apply the **Level 2 (aggressive) heuristic** unless one of the following
+downgrades it:
+- `--root-sync-strict` → Level 1 only
+- `--no-root-sync` → skip §3 entirely
+- `deltas_verified=1` from §2.5 → Level 1 only (deltas already gave a
+  more reliable signal for project-level docs; Level 2's keyword scan
+  and contradiction analysis would just duplicate that signal)
+
+Level 1 always runs (when not `--no-root-sync`) because it covers
+infrastructure signals (`package.json` deps, `Dockerfile`, `Makefile`)
+that the deltas section does not — deltas only declares modifications to
+the four project-level living docs.
 
 ### 3.1. Detect "this change might affect root docs"
 
@@ -149,6 +272,11 @@ Triggers:
   `new service`, `migration`, `deprecate`
 - Per-feature SPEC.md contradicts root SPEC.md (i.e., the per-feature spec
   describes architecture that is missing or different in root SPEC.md)
+
+**Level 2 is skipped when `deltas_verified=1`** (set by §2.5). The
+declared deltas already covered every project-level doc that needs
+updating; running keyword/contradiction heuristics would only duplicate
+or muddle that signal.
 
 Aggregate the triggered signals into a list of reasons.
 
@@ -280,7 +408,9 @@ Flags:
 - `--sprint <num>-<slug>` — explicit sprint folder (implies `--mode sprint`).
 - `--skip-review` — sprint mode only: bypass missing DRIFT.md (records a
   warning in the commit body).
-- `--no-root-sync` — skip §3 entirely.
+- `--no-root-sync` — skip both §2.5 (delta verification) and §3 entirely.
+- `--strict-deltas` — sprint mode only: §2.5 D1/D2 → exit non-zero
+  instead of interactive prompt. Incompatible with `--no-root-sync`.
 - `--root-sync-strict` — use Level 1 heuristic only (no PLAN/SPEC keyword
   scan, no contradiction analysis).
 - `--message <msg>` / `-m <msg>` — pre-supply the commit message; skip the
