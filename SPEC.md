@@ -748,6 +748,11 @@ marketplace for that one session. Closing the session reverts to the
 normally-installed version automatically. There is no `--no-plugin-dir`
 counterpart because there is nothing persistent to clear.
 
+Exception: a marketplace plugin force-enabled via managed settings
+(enterprise-deployment scenario) cannot be overridden by `--plugin-dir`
+— the managed install wins. Not relevant for solo development on this
+repo, but documented here for completeness.
+
 Multiple plugins may be loaded simultaneously by repeating the flag:
 `claude --plugin-dir ./a --plugin-dir ./b`.
 
