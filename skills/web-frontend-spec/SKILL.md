@@ -40,10 +40,15 @@ fi
 ## 1. Locate sprint + spec
 
 Find the sprint folder (default: most recent; or `--sprint <num>-<slug>`).
-The folder must contain a PLAN.md or SPEC.md. If only PLAN.md exists,
-ask the user whether to upgrade to SPEC.md as part of this elaboration.
+The folder must contain a plan-equivalent file. Identify which exists
+(priority order):
 
-If no sprint is open, abort and tell the user to run `/magi:plan` first.
+- If SPEC.md exists → use SPEC.md as the target.
+- If only PLAN.md exists → use PLAN.md as the target. Do NOT rename or
+  "upgrade" PLAN.md to SPEC.md — that is a separate decision the user
+  makes via `/magi:plan`, not forced by web-* skills.
+- If only TICKET.md exists → use TICKET.md as the target.
+- If none exists → abort and tell the user to run `/magi:plan` first.
 
 ## 2. Detect stack
 
@@ -83,15 +88,16 @@ Following the template in `references/domain/web/frontend.md`
 
 Use `output_language` for prose; keep code identifiers and headings in English.
 
-## 5. Append to SPEC.md
+## 5. Append to the target document
 
-Append the section under a top-level `## Frontend` heading. If a Frontend
-section already exists (perhaps from an earlier iteration), ask before
-overwriting.
+Append the section under a top-level `## Frontend` heading in whichever
+plan-equivalent file was identified in §1 (SPEC.md, PLAN.md, or
+TICKET.md). If a Frontend section already exists (perhaps from an earlier
+iteration), ask before overwriting.
 
 ```bash
 sprint_dir="magi/<num>-<slug>"
-# Append the new section to existing SPEC.md
+# Append the new section to the target document
 ```
 
 ## 6. Optional: scaffold the Playwright file

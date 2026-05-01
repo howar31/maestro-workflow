@@ -66,6 +66,23 @@ Read `TASKS.md`. Determine the next batch of work:
 If nothing is left to do, tell the user the sprint is complete and suggest
 `/magi:review-code`.
 
+## 1.5. Mirror tasks to Claude task UI (session-scoped)
+
+After identifying the batch of tasks for this milestone, create
+corresponding Claude tasks using TaskCreate for each task in the batch.
+This provides in-session progress tracking via Claude's native task UI.
+
+For each task:
+  TaskCreate: description = "T<m>.<n> — <task description from TASKS.md>"
+
+As tasks complete or block, update them:
+  TaskUpdate: status = "completed" (on DONE) or include blocker info
+
+TASKS.md remains the single source of truth (SSOT). The Claude task UI
+is a session-local convenience view — it does not persist across sessions.
+If TaskCreate/TaskUpdate tools are not available in this session, skip
+this step silently and proceed with TASKS.md-only tracking.
+
 ## 2. Read context
 
 For each task to dispatch, gather context the developer will need:
@@ -171,6 +188,31 @@ contend on the same file. If auto-detection chose parallel but a runtime
 collision shows up (e.g., the same module appears in two diffs unexpectedly),
 abort and ask the user to re-decompose.
 
+## 4.5. Transient failure retry
+
+If a developer subagent fails with a **stream idle timeout** or
+**connection timeout** error (NOT a logical BLOCKED), apply a single
+automatic retry before reporting to the user:
+
+1. Wait 10 seconds (brief cooldown).
+2. Re-dispatch the exact same brief to the developer.
+3. If the retry also fails → stop and report to user as BLOCKED with
+   the error details. Do NOT retry more than once.
+
+This handles transient Claude API/CLI stream idle timeout errors that
+are not the developer's fault. The retry is limited to ONE attempt to
+avoid infinite loops.
+
+Detection: the subagent's output will contain phrases like
+"stream idle timeout", "connection timed out", "API Error: Stream idle
+timeout", or similar. These are API-level failures, not task-logic
+failures.
+
+Do NOT retry for:
+- BLOCKED due to missing files, wrong types, unclear spec (logical blocks)
+- BLOCKED due to test failures (real regressions)
+- Any other non-timeout error
+
 ## 5. After each task / batch
 
 Run the project test command **once** to confirm nothing else broke.
@@ -212,6 +254,33 @@ Append a journal entry for the work just completed:
 WORKS.md is the auditable history of how the sprint actually unfolded — it
 captures decisions and observations that PLAN/SPEC/TASKS would not preserve.
 
+## 6.5. Continuation policy (DO NOT over-segment)
+
+You MUST run ALL tasks within the current milestone before stopping. Do
+NOT pause between tasks to ask the user "should I continue?" within a
+single milestone.
+
+**Valid stop points (exhaustive list):**
+- All tasks in the current milestone are DONE → stop at milestone boundary
+- A task returns BLOCKED → stop and report the blocker
+- A hard gate is encountered (e.g., TASKS.md marks a halt point, missing
+  credentials, env not set up)
+- The user explicitly interrupts (Ctrl+C or typed "stop")
+- Scope overflow: developer's work clearly exceeds the task description
+
+**INVALID stop points (anti-patterns — do NOT do these):**
+- ❌ After completing one task, asking "should I continue to the next task?"
+  within the same milestone
+- ❌ After one parallel batch completes, asking before dispatching the next
+  batch within the same milestone
+- ❌ After running tests post-task, asking before the next task
+- ❌ "Checking in" with the user mid-milestone for any reason other than the
+  valid stop points above
+
+The loop is: dispatch task → verify → update WORKS.md → next task in
+milestone → repeat. No user interaction until the milestone is finished or
+a valid stop condition is hit.
+
 ## 7. Stop and hand off
 
 Tell the user, in their `output_language`:
@@ -222,10 +291,12 @@ Tell the user, in their `output_language`:
 
 | Outcome | Recommended next |
 |---------|------------------|
-| Some tasks remain in this milestone | `/magi:go` again (or auto-continue if user says so) |
 | Milestone done, more milestones remain | `/magi:go` (next milestone) |
 | All tasks done — sprint implementation complete | **`/magi:review-code` (mandatory — produces DRIFT.md required by `/magi:commit`)** |
 | BLOCKED | resolve the blocker; consider `/magi:plan --into <sprint>` to revise contract |
+
+When presenting multiple actionable choices, use the AskUserQuestion tool
+so the options appear interactively in the terminal.
 
 Always mark `/magi:review-code` as **mandatory** in the hand-off message —
 it's not an optional review like `/magi:review-plan`; it produces
@@ -261,6 +332,7 @@ modes.
 - **Read TASKS.md as the contract.** Do not invent tasks; do not skip
   unchecked tasks except to reorder for parallelism.
 - **WORKS.md is append-only.** Never rewrite past entries.
+- **Run full milestones atomically.** See §6.5 — never pause mid-milestone.
 - **Ask before destructive operations.** A task that says "remove
   deprecated module X" should be confirmed with the user before
   dispatching.

@@ -204,8 +204,24 @@ no current sprint). Use `output_language`:
 # 🧠 MAGI Code Review — <branch> @ <short-sha>
 
 **Diff scope:** <range>
-**Mode:** <mode>  •  **OK weight:** <ok_weight> / <total>
-**Threshold:** <threshold>  •  **Degraded:** yes | no
+
+## Dashboard
+
+```
+┌─────────────────────────────────────────────────┐
+│  VERDICT: <APPROVE | APPROVE-WITH-NITS | ...>   │
+├─────────────────────────────────────────────────┤
+│  Mode: <mode>        Threshold: <value>         │
+│  OK weight: <ok> / <total>    Degraded: <y/n>   │
+├─────────────────────────────────────────────────┤
+│  <✅|❌> claude  <✅|❌> gemini  <✅|❌> codex  │
+├─────────────────────────────────────────────────┤
+│  🔴 Critical: <N>    🟡 Important: <N>         │
+│  🟢 Minority: <N>                               │
+└─────────────────────────────────────────────────┘
+```
+
+Generate this box dynamically using the actual values.
 
 ## Verdict
 APPROVE | APPROVE-WITH-NITS | REQUEST-CHANGES
@@ -227,9 +243,11 @@ APPROVE | APPROVE-WITH-NITS | REQUEST-CHANGES
 ```
 
 For `--single` mode the file is `<sprint_dir>/SINGLE_CODE_REVIEW.md` and
-omits the MAGI-specific sections (mode/weights/etc.).
+omits the MAGI-specific sections (mode/weights/Dashboard/etc.).
 
-Summarise top concerns in chat: 3 most critical issues + verdict.
+Summarise top concerns in chat: include a condensed Dashboard box
+(verdict + issue counts on 2-3 lines), followed by the top 3 most
+critical issues.
 
 ## 3.5. Write DRIFT.md (when a sprint context exists)
 

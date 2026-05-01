@@ -45,12 +45,15 @@ Decision rule: "Want to see it on first opening the repo?" → Tier 1. "Referenc
 ## Slash commands (Phase B)
 
 Every command's SKILL.md has `disable-model-invocation: true` — it only runs
-when the user explicitly types the slash. The single intentional exception
-is `/magi:status`: a read-only quick-look printer with no destructive side
-effects, left auto-invocable so Claude can self-orient when the user is
-mid-flow but the conversation is ambiguous about what to do next. Skills
-delegate to the orchestrator + magi-consensus shell scripts and to the two
-subagents below.
+when the user explicitly types the slash. The intentional exceptions are:
+`/magi:status` (read-only quick-look printer), `/magi:help` (read-only
+reference with no side effects), and `/magi:init` (idempotent bootstrap
+that never overwrites existing files). These are left auto-invocable so
+Claude can self-orient or offer bootstrap guidance without forcing the user
+to type the exact slash command. Skills that trigger subagent dispatches,
+external CLIs, or file writes retain the flag for safety. Skills delegate
+to the orchestrator + magi-consensus shell scripts and to the two subagents
+below.
 
 | Command | Body summary |
 |---------|--------------|

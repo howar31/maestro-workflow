@@ -63,6 +63,14 @@ read_patterns() {
   ' "$config" 2>/dev/null
 }
 
+# Detect stream idle timeout. Returns 0 if matched, 1 otherwise.
+# Args: <log-file>
+is_stream_idle_timeout() {
+  local log_file="$1"
+  [[ -f "$log_file" ]] || return 1
+  grep -qiE "stream.*(idle|timeout)|idle.*timeout|connection.*timed?\s*out" "$log_file" 2>/dev/null
+}
+
 # Returns 0 if any pattern from config.xreview.<category>.<cli> matches the
 # log file content; 1 otherwise. Bash 3.2 compatible (no mapfile).
 # Args: <log-file> <config> <category> <cli>

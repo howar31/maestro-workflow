@@ -35,11 +35,13 @@ extract_claude_single_json() {
 
 # Gemini CLI default: prints reply to stdout with possible header noise.
 # Best-effort: strip ANSI, strip leading/trailing whitespace.
+# Use POSIX cat -s instead of GNU-only sed multiline syntax (BSD sed on macOS
+# rejects /^$/{ N; /^\n$/D }).
 extract_gemini_plain() {
   local input="$1"
   sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$input" \
     | awk 'NF { found = 1 } found' \
-    | sed -E '/^$/{ N; /^\n$/D }'
+    | cat -s
 }
 
 # Codex CLI default: similar to gemini, plain text reply on stdout.

@@ -1,7 +1,6 @@
 ---
 name: help
 description: Quick reference for magi-workflow. Bare invocation prints the full command roster, the standard workflow diagram, subagent roles, and common override flags, plus a state-aware "next step" hint when run inside a magi project. Pass a command name (e.g., /magi:help plan) to print details for one command extracted from its SKILL.md. Always allowed regardless of project state — this is the entry point users reach for when they don't remember which command to run.
-disable-model-invocation: true
 ---
 
 # /magi:help — quick reference & next-step hint
@@ -138,6 +137,10 @@ Walk-away:
 Web add-ons (between plan and tasks):
   /magi:web-frontend-spec   /magi:web-backend-spec
   /magi:web-infra-plan      /magi:web-ci-spec
+
+Note: /magi:plan creates plan documents (PLAN.md / SPEC.md / TICKET.md /
+      HOTFIX.md). For interactive read-only exploration, use Claude's
+      built-in /plan first, then /magi:plan to formalize.
 ```
 
 ### Section C — Subagents

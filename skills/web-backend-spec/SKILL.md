@@ -40,9 +40,15 @@ fi
 ## 1. Locate sprint + spec
 
 Find the sprint folder (default: most recent; or `--sprint <num>-<slug>`).
-Read the existing PLAN.md / SPEC.md.
+The folder must contain a plan-equivalent file. Identify which exists
+(priority order):
 
-If no sprint is open, abort and tell the user to run `/magi:plan` first.
+- If SPEC.md exists → use SPEC.md as the target.
+- If only PLAN.md exists → use PLAN.md as the target. Do NOT rename or
+  "upgrade" PLAN.md to SPEC.md — that is a separate decision the user
+  makes via `/magi:plan`, not forced by web-* skills.
+- If only TICKET.md exists → use TICKET.md as the target.
+- If none exists → abort and tell the user to run `/magi:plan` first.
 
 ## 2. Detect stack
 
@@ -134,10 +140,11 @@ Include the exact test command(s).
 
 What's unresolved?
 
-## 5. Append to SPEC.md
+## 5. Append to the target document
 
-Append under `## Backend` top-level heading. If a Backend section exists,
-ask before overwriting / merging.
+Append under `## Backend` top-level heading in whichever plan-equivalent
+file was identified in §1 (SPEC.md, PLAN.md, or TICKET.md). If a Backend
+section exists, ask before overwriting / merging.
 
 If the API contract is large, write it to `magi/<num>-<slug>/openapi.yaml` or
 `magi/<num>-<slug>/schema.graphql` and link from SPEC.md.

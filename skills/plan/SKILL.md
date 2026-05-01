@@ -6,6 +6,13 @@ disable-model-invocation: true
 
 # /magi:plan — smart dispatcher + feature planning
 
+> **Note:** `/magi:plan` creates plan **documents** (PLAN.md / SPEC.md /
+> TICKET.md / HOTFIX.md) as artifacts in a sprint folder. It is NOT
+> Claude's native plan mode (`/plan`). If you want an interactive
+> read-only exploration session before formalizing a plan, use Claude's
+> built-in `/plan` command first, then run `/magi:plan` to capture the
+> result as a structured document.
+
 You are the coordinator (Opus). Classify the user's request, route to the
 appropriate artifact, and pause for user confirmation. **You do not write
 production code in this skill.**
@@ -149,7 +156,8 @@ PLAN for exploratory phase, SPEC when requirements are clear.
 
 ### Step D. Confirm with user (interactive override)
 
-Show the classification and let user adjust before any file is written:
+Use the **AskUserQuestion** tool to present the classification and options
+interactively, so the user sees the choices in the terminal:
 
 ```
 識別為：feat / minor → 將建立 TICKET.md，路徑 magi/03-search-pagination/TICKET.md
@@ -403,7 +411,17 @@ the sprint folder is created, also update `magi/BACKLOG.md`:
   - ~~<original description>~~ → `magi/<num>-<slug>/` (<YYYY-MM-DD>)
   ```
 
-After writing, **stop and ask the user to confirm**. Do not auto-trigger
+After writing, display the full path prominently so the user can click or
+copy it to review in their preferred editor:
+
+```
+📄 Plan written to:
+   magi/<num>-<slug>/<ARTIFACT>.md
+```
+
+The path line must appear on its own line, not buried in a paragraph.
+
+Then **stop and ask the user to confirm**. Do not auto-trigger
 `/magi:review-plan`. The user is the gate.
 
 For PLAN.md / SPEC.md: explicitly draw the user's attention to the
@@ -438,7 +456,9 @@ When the user confirms the document:
 
    Skip this entire step if **no** keywords match — do not bother the user with empty prompts.
 
-2. Tell them the next recommended step **based on the artifact produced**
+2. Restate the artifact path once more: `📄 magi/<num>-<slug>/<ARTIFACT>.md`
+
+3. Tell them the next recommended step **based on the artifact produced**
    (this is where the dispatcher routing pays off):
 
    | Artifact | Recommended next step |
@@ -448,13 +468,13 @@ When the user confirms the document:
    | `HOTFIX.md` | `/magi:go` directly (skip both `/magi:tasks` and `/magi:review-plan` — fast-path) |
    | (no artifact, e.g., chore/docs/typo) | `/magi:commit` standalone after your edit |
 
-3. If §1 picked any web add-on (Frontend/Backend/Infra/CI), suggest those
+4. If §1 picked any web add-on (Frontend/Backend/Infra/CI), suggest those
    first, then continue to the appropriate next step from the table above.
 
-4. Always mark `/magi:review-plan` as **optional** in the hand-off message
+5. Always mark `/magi:review-plan` as **optional** in the hand-off message
    and `/magi:review-code` as **mandatory** wherever it appears.
 
-5. Do not run anything automatically — every next skill needs the user's explicit slash command.
+6. Do not run anything automatically — every next skill needs the user's explicit slash command.
 
 ## Known pitfalls
 

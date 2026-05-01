@@ -1,7 +1,6 @@
 ---
 name: init
 description: One-time, idempotent project bootstrap. Detects which magi-workflow project files are missing (root CLAUDE/README/SPEC, magi/PRD/TECHSTACK/BACKLOG) and offers to scaffold them. Never overwrites existing files. Run once when adopting magi-workflow on a new or existing project. Safe to re-run.
-disable-model-invocation: true
 ---
 
 # /magi:init — project bootstrap
@@ -46,6 +45,46 @@ Show the user both lists clearly.
 
 If `missing` is empty, tell the user "project is already bootstrapped" and
 suggest `/magi:plan` for next steps. Exit.
+
+## 1.5. Context gathering (empty/new project detection)
+
+After scanning, check whether this is a **greenfield project** (no existing
+code files beyond what magi-workflow creates):
+
+```bash
+code_files=$(find . -maxdepth 3 -type f \
+  -not -path './.git/*' \
+  -not -path './magi/*' \
+  -not -name 'CLAUDE.md' \
+  -not -name 'README.md' \
+  -not -name 'SPEC.md' \
+  -not -name '.gitignore' \
+  -not -name 'LICENSE' \
+  | head -5 | wc -l)
+```
+
+If `code_files == 0` (empty/greenfield project), enter **guided init mode**:
+
+Use AskUserQuestion to gather project context before generating templates.
+Ask these questions in the user's `output_language`, consolidated into one
+prompt:
+
+1. **Project name** — what is this project called?
+2. **One-sentence description** — what does it do?
+3. **Tech stack** — what language/framework/runtime will you use?
+   (e.g., "TypeScript + Next.js", "Python + FastAPI", "Go net/http")
+4. **Primary goal** — what is the first thing you want to build?
+
+Use the answers to populate the template placeholders in §3. Specifically:
+- CLAUDE.md: fill `<one-sentence description>` with answer 2
+- README.md: fill `<Project Name>` with answer 1, description with answer 2
+- SPEC.md: fill architecture overview with answer 3 context
+- magi/PRD.md: fill Problem and Goals with answers 2 and 4
+- magi/TECHSTACK.md: fill Language and Framework with answer 3
+
+If `code_files > 0` (existing codebase), proceed with the current behavior
+(LLM reads the codebase to infer context). Do NOT ask the interactive
+questions — the code speaks for itself.
 
 ## 2. Confirm with the user (unless `--all`)
 

@@ -100,6 +100,24 @@ is a valid signal.
 If `## Spec deltas` is missing entirely from a PLAN.md or SPEC.md, raise
 one Important `[deltas]` issue saying so. (TICKET.md and HOTFIX.md never
 contain this section — do not raise the issue against those.)
+
+[Feasibility assessment]
+Examine the plan for assumptions about development effort, complexity, or
+tool/framework ergonomics that have not been validated by prototype or
+prior experience. Examples:
+- "vanilla TS state management is sufficient" — has this been prototyped?
+- "migration will take ~2 hours" — based on what evidence?
+- "no external dependencies needed" — are there hidden complexities?
+
+For each such assumption, output:
+
+  ## Spike candidate: <one-line assumption>
+  Risk: <what could go wrong if this assumption is false>
+  Validation: <how to validate — small prototype, benchmark, or PoC>
+
+If no feasibility assumptions need validation, write:
+  ## Spike candidates
+  (none identified)
 ```
 
 ## 3. Argument parsing
@@ -161,8 +179,25 @@ Write to `<sprint_dir>/MAGI_PLAN_REVIEW.md` in `output_language`:
 # 🧠 MAGI Plan Review — <Feature Name>
 
 **Sprint:** magi/<num>-<slug>/ • **Document:** PLAN.md | SPEC.md
-**Mode:** <mode>  •  **OK weight:** <ok_weight> / <total_weight>
-**Threshold:** <threshold_value>  •  **Degraded:** yes | no
+
+## Dashboard
+
+```
+┌─────────────────────────────────────────────────┐
+│  VERDICT: <APPROVE | APPROVE-WITH-NITS | ...>   │
+├─────────────────────────────────────────────────┤
+│  Mode: <mode>        Threshold: <value>         │
+│  OK weight: <ok> / <total>    Degraded: <y/n>   │
+├─────────────────────────────────────────────────┤
+│  <✅|❌> claude  <✅|❌> gemini  <✅|❌> codex  │
+├─────────────────────────────────────────────────┤
+│  🔴 Critical: <N>    🟡 Important: <N>         │
+│  🟢 Minority: <N>    🔬 Spikes: <N>            │
+└─────────────────────────────────────────────────┘
+```
+
+Generate this box dynamically using the actual values. Adjust column
+widths to fit the content.
 
 ## Verdict
 <APPROVE | APPROVE-WITH-NITS | REQUEST-CHANGES>
@@ -181,22 +216,69 @@ Reasoning ...
 - [vote: 1/4 — codex(1) only] <issue>
   - Reviewer text: ...
 
+## 🔬 Spike candidates
+- [flagged by: <reviewers>] <assumption>
+  Risk: ...
+  Validation: ...
+
 ## ⚠️ Degraded mode (if applicable)
 <short explanation of what was missing>
 ```
 
-Then summarise to the user in chat: top 3 adopted issues + verdict.
+Then summarise to the user in chat: include a condensed version of the
+Dashboard box (verdict + issue counts on 2-3 lines), followed by the top
+3 adopted issues.
+
+## 7.5. Re-review guidance (round awareness + severity triage)
+
+### Round tracking
+
+Check whether a previous `MAGI_PLAN_REVIEW.md` exists for this sprint
+(the current run overwrites it, but its presence before overwrite signals
+a prior round). Also check WORKS.md or git history for earlier review
+references. If this is a repeated review on the same document version,
+track the round number.
+
+General guidance:
+- **Round 1**: normal review. All issue severities warrant attention.
+- **Round 2**: focus on whether round-1 Critical/Important issues were
+  addressed. New issues are fine to raise.
+- **Round 3+**: tell the user explicitly: "This is round 3+. Repeated
+  review rounds have diminishing returns. Consider proceeding to
+  `/magi:tasks` unless there are unresolved Critical issues."
+
+### Severity-based re-review recommendation
+
+When the verdict is REQUEST-CHANGES, classify whether the issues are:
+
+**(a) Architectural / structural** — fundamentally changes the design
+shape, API contracts, data model, or dependency choices. These warrant
+PLAN/SPEC revision followed by re-review.
+
+**(b) Implementation-detail level** — naming, error handling strategy,
+test approach, logging format. These should be recorded in the PLAN as
+`## Implementation notes` (append section) for the developer to follow
+during `/magi:go`, but do NOT require a full re-review cycle.
+
+Apply this classification in §8 hand-off below.
 
 ## 8. Hand-off
 
-Tell the user (in `output_language`):
+Tell the user (in `output_language`). When presenting multiple actionable
+choices, use the **AskUserQuestion** tool so the options appear interactively:
 
 - If verdict = APPROVE → suggest `/magi:tasks` (if TASKS.md doesn't exist)
   or `/magi:go` (if it does).
 - If verdict = APPROVE-WITH-NITS → list nits, ask whether to address
   before `/magi:tasks` or defer.
-- If verdict = REQUEST-CHANGES → suggest user revise PLAN/SPEC, then
-  re-run `/magi:review-plan` (which will overwrite `MAGI_PLAN_REVIEW.md`).
+- If verdict = REQUEST-CHANGES → apply §7.5 severity triage:
+  - If only (b)-type issues remain → recommend: "Record these as
+    Implementation notes and proceed to `/magi:tasks`."
+  - If any (a)-type issues remain → recommend: "Revise PLAN/SPEC to
+    address the architectural concerns, then re-run `/magi:review-plan`."
+  - If round >= 3 and only (b)-type remain → strongly recommend
+    proceeding: "已超過兩輪 review，剩餘皆為實作細節，建議直接進入
+    `/magi:tasks`。"
 
 Example output:
 

@@ -1,7 +1,7 @@
 # magi-workflow
 
 [![License: MIT](https://img.shields.io/github/license/howar31/magi-workflow?color=blue&style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v0.9.1-blue?style=flat-square)](.claude-plugin/plugin.json)
+[![Version](https://img.shields.io/badge/version-v0.10.0-blue?style=flat-square)](.claude-plugin/plugin.json)
 [![Built for Claude Code](https://img.shields.io/badge/built%20for-Claude%20Code-CC785C?style=flat-square)](https://claude.com/claude-code)
 [![Made with Bash](https://img.shields.io/badge/made%20with-Bash-1f425f?logo=gnu-bash&logoColor=white&style=flat-square)](https://www.gnu.org/software/bash/)
 [![Conventional Commits](https://img.shields.io/badge/conventional%20commits-1.0.0-yellow?style=flat-square)](https://www.conventionalcommits.org)
@@ -153,7 +153,7 @@ magi-workflow 內部有三個角色。Reviewer 角色提供兩種實作模式：
 
 ## 啟用模式
 
-**每個 slash command 必須由使用者手動輸入 `/magi:<name>` 才會啟動。** 除了 read-only 的 `/magi:status` 之外，所有 skill 皆帶有 `disable-model-invocation: true`：即使在 plain chat 中向 Claude 表達「幫我 plan 一下」，也不會自動觸發 `/magi:plan`。
+**每個 slash command 必須由使用者手動輸入 `/magi:<name>` 才會啟動。** 除了 `/magi:status`（read-only）、`/magi:help`（read-only reference）、`/magi:init`（idempotent bootstrap）之外，所有 skill 皆帶有 `disable-model-invocation: true`：即使在 plain chat 中向 Claude 表達「幫我 plan 一下」，也不會自動觸發 `/magi:plan`。
 
 設計理由：
 - **可預期** — 每次 fan-out 消耗 token 且可能修改檔案，自動觸發風險過高
@@ -162,7 +162,7 @@ magi-workflow 內部有三個角色。Reviewer 角色提供兩種實作模式：
 
 > **`/magi:yolo` 同樣適用此規則**：yolo 雖為「無人值守」模式，但仍為 `disable-model-invocation: true` 的 slash command；必須使用者明確輸入 `/magi:yolo "<描述>"` 或 `/magi:yolo --resume` 才會啟動。LLM 不會於 plain chat 中聽到「幫我跑完整個」便擅自觸發 yolo。**「無人值守」指啟動後不向使用者 prompt，並非 LLM 自行決定是否啟動。**
 
-> **進階**：若需切換為 LLM 可自動 invoke，移除 `skills/<name>/SKILL.md` frontmatter 中的 `disable-model-invocation: true`（各 skill 獨立控制）。`/magi:status` 自 v0.7.0 起預設拿掉此欄位，方便 Claude 在對話模糊時自主取得「目前在哪、下一步該做什麼」。
+> **進階**：若需切換為 LLM 可自動 invoke，移除 `skills/<name>/SKILL.md` frontmatter 中的 `disable-model-invocation: true`（各 skill 獨立控制）。`/magi:status` 自 v0.7.0 起、`/magi:help` 與 `/magi:init` 自 v0.10.0 起預設拿掉此欄位，方便 Claude 在對話模糊時自主取得資訊或引導 bootstrap。
 
 ## 專案狀態（Project state）
 

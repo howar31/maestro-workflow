@@ -72,6 +72,21 @@ becomes backlog material.
 
 You do **not** flag stylistic nits the linter / formatter handles.
 
+## Feasibility assumptions
+
+When the plan assumes development simplicity (e.g., "vanilla approach is
+fine", "should be straightforward", "no framework needed"), flag these as
+spike candidates if they involve:
+- State management complexity at scale
+- Performance under realistic load
+- Third-party API behavior not documented
+- Build/bundling tool chain assumptions
+
+A spike candidate is NOT a bug or a design flaw — it is an unvalidated
+assumption that should be prototyped before the team commits to the
+approach. Technical correctness (algorithms, policies, edge cases) can be
+paper-reviewed; ergonomics and development cost usually cannot.
+
 # Output protocol
 
 Always end with this exact structure (in `output_language` where reasonable;
